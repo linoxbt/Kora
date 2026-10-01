@@ -1,0 +1,60 @@
+name: Kora sandbox
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  financial-core:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: kora
+          POSTGRES_PASSWORD: kora_ci_only
+          POSTGRES_DB: kora
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kora -d kora"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://kora:kora_ci_only@127.0.0.1:5432/kora
+      KORA_MODE: sandbox
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod
+      - run: pnpm sandbox:init
+      - run: pnpm db:migrate
+      - run: pnpm contract:check
+      - run: pnpm build
+      - run: pnpm check
+      - run: pnpm smoke:phase1
+      - run: pnpm smoke:phase7
+      - run: pnpm smoke:phase6
+      - run: pnpm smoke:phase5
+      - run: pnpm backup:drill
+        env:
+          KORA_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+      - run: pnpm smoke:phase3
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:browser
+      - run: pnpm test:browser:auth
+      - run: pnpm test:browser:network
+      - run: pnpm test:browser:rail
+      - run: pnpm test:browser:stellar
+      - run: pnpm test:browser:controls
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failures
+          path: |
+            playwright-report/
+            test-results/

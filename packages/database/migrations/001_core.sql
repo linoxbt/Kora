@@ -1,0 +1,45 @@
+CREATE TABLE merchants (id text PRIMARY KEY, name text NOT NULL, mode text NOT NULL CHECK(mode='sandbox'), created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE api_keys (id text PRIMARY KEY, merchant_id text NOT NULL REFERENCES merchants, name text NOT NULL, prefix text NOT NULL, hash text NOT NULL UNIQUE, revoked_at timestamptz, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE sessions (token_hash text PRIMARY KEY, merchant_id text NOT NULL REFERENCES merchants, expires_at timestamptz NOT NULL);
+CREATE TABLE ledger_accounts (id text PRIMARY KEY, merchant_id text REFERENCES merchants, asset text NOT NULL CHECK(asset IN ('NGN','KES','GHS','USDC')), purpose text NOT NULL CHECK(purpose IN ('available','reserved','clearing','fees','funding')), UNIQUE NULLS NOT DISTINCT(merchant_id,asset,purpose));
+CREATE TABLE journals (id text PRIMARY KEY, reference text NOT NULL UNIQUE, fingerprint text NOT NULL, description text NOT NULL, posting_xid xid8 NOT NULL DEFAULT pg_current_xact_id(), created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE ledger_entries (id text PRIMARY KEY, journal_id text NOT NULL REFERENCES journals, account_id text NOT NULL REFERENCES ledger_accounts, side text NOT NULL CHECK(side IN ('debit','credit')), amount numeric(30,0) NOT NULL CHECK(amount>0), created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX ledger_entries_account ON ledger_entries(account_id);
+CREATE FUNCTION immutable_financial_record() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Posted financial records are immutable'; END $$;
+CREATE TRIGGER immutable_entries BEFORE UPDATE OR DELETE ON ledger_entries FOR EACH ROW EXECUTE FUNCTION immutable_financial_record();
+CREATE TRIGGER immutable_journals BEFORE UPDATE OR DELETE ON journals FOR EACH ROW EXECUTE FUNCTION immutable_financial_record();
+CREATE TRIGGER immutable_accounts BEFORE UPDATE OR DELETE ON ledger_accounts FOR EACH ROW EXECUTE FUNCTION immutable_financial_record();
+CREATE FUNCTION disallow_late_entry() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM journals WHERE id=NEW.journal_id AND posting_xid=pg_current_xact_id()) THEN RAISE EXCEPTION 'Cannot append to a posted journal'; END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER disallow_late_entry BEFORE INSERT ON ledger_entries FOR EACH ROW EXECUTE FUNCTION disallow_late_entry();
+CREATE FUNCTION check_balanced_journal() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE target text; BEGIN
+  IF TG_TABLE_NAME = 'journals' THEN target := NEW.id; ELSE target := NEW.journal_id; END IF;
+  IF NOT EXISTS (SELECT 1 FROM ledger_entries WHERE journal_id=target) THEN RAISE EXCEPTION 'Journal has no entries'; END IF;
+  IF EXISTS (SELECT a.asset FROM ledger_entries e JOIN ledger_accounts a ON a.id=e.account_id WHERE e.journal_id=target GROUP BY a.asset HAVING SUM(CASE WHEN e.side='debit' THEN e.amount ELSE -e.amount END)<>0) THEN RAISE EXCEPTION 'Journal is unbalanced'; END IF;
+  RETURN NULL;
+END $$;
+CREATE CONSTRAINT TRIGGER balanced_entries AFTER INSERT ON ledger_entries DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_balanced_journal();
+CREATE CONSTRAINT TRIGGER balanced_journals AFTER INSERT ON journals DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_balanced_journal();
+CREATE TABLE holds (id text PRIMARY KEY, merchant_id text NOT NULL REFERENCES merchants, asset text NOT NULL, amount numeric(30,0) NOT NULL CHECK(amount>0), reference text NOT NULL UNIQUE, state text NOT NULL CHECK(state IN ('held','captured','released')), created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE hold_completions (hold_id text PRIMARY KEY REFERENCES holds, fee numeric(30,0) NOT NULL CHECK(fee>=0));
+CREATE TRIGGER immutable_hold_completions BEFORE UPDATE OR DELETE ON hold_completions FOR EACH ROW EXECUTE FUNCTION immutable_financial_record();
+CREATE TABLE journal_reversals (original_journal_id text PRIMARY KEY REFERENCES journals, reversing_journal_id text NOT NULL UNIQUE REFERENCES journals, reason text NOT NULL);
+CREATE TRIGGER immutable_journal_reversals BEFORE UPDATE OR DELETE ON journal_reversals FOR EACH ROW EXECUTE FUNCTION immutable_financial_record();
+CREATE TABLE fake_provider_movements (instruction_id text PRIMARY KEY, hold_id text NOT NULL REFERENCES holds, fingerprint text NOT NULL, provider_ref text NOT NULL UNIQUE, outcome text NOT NULL CHECK(outcome IN ('confirmed','rejected')), created_at timestamptz NOT NULL DEFAULT now());
+CREATE TRIGGER immutable_fake_movements BEFORE UPDATE OR DELETE ON fake_provider_movements FOR EACH ROW EXECUTE FUNCTION immutable_financial_record();
+CREATE TABLE quotes (id text PRIMARY KEY, merchant_id text NOT NULL REFERENCES merchants, source_asset text NOT NULL, destination_asset text NOT NULL, source_minor numeric(30,0) NOT NULL CHECK(source_minor>0), destination_minor numeric(30,0) NOT NULL CHECK(destination_minor>0), fee_minor numeric(30,0) NOT NULL CHECK(fee_minor>0), route jsonb NOT NULL, expires_at timestamptz NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE intents (id text PRIMARY KEY, merchant_id text NOT NULL REFERENCES merchants, quote_id text NOT NULL UNIQUE REFERENCES quotes, type text NOT NULL CHECK(type IN ('transfer','asset_purchase','asset_redemption')), state text NOT NULL CHECK(state IN ('processing','unknown','succeeded','failed','canceled','returned')), source_asset text NOT NULL, destination_asset text NOT NULL, source_minor numeric(30,0) NOT NULL, destination_minor numeric(30,0) NOT NULL, fee_minor numeric(30,0) NOT NULL, beneficiary text NOT NULL, reference text NOT NULL, scenario text NOT NULL CHECK(scenario IN ('success','timeout','insufficient_float','returned')), route jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX intents_merchant_created ON intents(merchant_id,created_at DESC,id DESC);
+CREATE TABLE intent_history (id text PRIMARY KEY, intent_id text NOT NULL REFERENCES intents, state text NOT NULL, detail text NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE idempotency (merchant_id text NOT NULL REFERENCES merchants, endpoint text NOT NULL, key text NOT NULL, fingerprint text NOT NULL, response jsonb NOT NULL, status integer NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(merchant_id,endpoint,key));
+CREATE TABLE instructions (id text PRIMARY KEY, intent_id text NOT NULL UNIQUE REFERENCES intents, provider_ref text NOT NULL UNIQUE, state text NOT NULL CHECK(state IN ('created','unknown','confirmed','rejected')), created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE provider_executions (instruction_id text PRIMARY KEY REFERENCES instructions, provider_ref text NOT NULL UNIQUE, outcome text NOT NULL CHECK(outcome IN ('confirmed','rejected')), created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE receipts (id text PRIMARY KEY, instruction_id text NOT NULL REFERENCES instructions, provider_ref text NOT NULL UNIQUE, payload jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE outbox (id text PRIMARY KEY, intent_id text NOT NULL REFERENCES intents, kind text NOT NULL, processed_at timestamptz, available_at timestamptz NOT NULL DEFAULT now(), UNIQUE(intent_id,kind));
+CREATE TABLE events (id text PRIMARY KEY, merchant_id text NOT NULL REFERENCES merchants, intent_id text REFERENCES intents, type text NOT NULL, data jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE reconciliation_items (id text PRIMARY KEY, intent_id text NOT NULL UNIQUE REFERENCES intents, reason text NOT NULL, state text NOT NULL CHECK(state IN ('open','resolved')), resolved_at timestamptz, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE webhook_endpoints (id text PRIMARY KEY, merchant_id text NOT NULL REFERENCES merchants, url text NOT NULL, secret text NOT NULL, active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE webhook_deliveries (id text PRIMARY KEY, endpoint_id text NOT NULL REFERENCES webhook_endpoints, event_id text NOT NULL REFERENCES events, state text NOT NULL DEFAULT 'pending', attempts integer NOT NULL DEFAULT 0, next_attempt_at timestamptz NOT NULL DEFAULT now(), status_code integer, last_error text, UNIQUE(endpoint_id,event_id));

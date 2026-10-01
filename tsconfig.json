@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "jsx": "react-jsx",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@kora/sdk": ["./sdks/typescript/src/index.ts"]
+    }
+  },
+  "include": [
+    "apps",
+    "packages",
+    "connectors",
+    "services",
+    "sdks",
+    "scripts",
+    "tests",
+    "playwright.config.ts",
+    "playwright.rail.config.ts",
+    "playwright.stellar.config.ts",
+    "playwright.controls.config.ts",
+    "playwright.network.config.ts",
+    "playwright.auth.config.ts"
+  ]
+}

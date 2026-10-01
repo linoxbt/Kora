@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - services/*
+  - packages/*
+  - sdks/*
+  - connectors/*
+onlyBuiltDependencies:
+  - esbuild

@@ -1,0 +1,33 @@
+[build]
+  command = "pnpm build"
+  publish = "apps/web/dist"
+
+[[redirects]]
+  from = "/docs"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/connect"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/login"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/login/save"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/app/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/ramp"
+  to = "/index.html"
+  status = 200
