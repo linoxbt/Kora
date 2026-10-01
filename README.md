@@ -84,6 +84,12 @@ filters restrict intent processing and webhook delivery, respectively. With
 `--intent`, generic local-rail jobs are skipped. Without that filter, the worker
 also processes collections, provider callbacks and statements when configured.
 
+`netlify.toml` publishes the built frontend and supports direct visits to its
+client-side pages. A static Netlify deploy does not run the Fastify API, worker,
+or PostgreSQL database, so workspace creation and transfers require a separately
+hosted backend. Use the local stack or a configured development preview to try
+the functional sandbox.
+
 `pnpm smoke:phase1` starts temporary separate API/worker processes and a local
 webhook receiver, verifies HTTP authentication, duplicate-request handling,
 timeout recovery, one provider movement/receipt, and signed delivery, then closes
