@@ -22,6 +22,9 @@ test('public landing and generated API guide render', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'One payment flow. Complete visibility.' })).toBeVisible();
   await expect(page.getByText('No live payments.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'A sandbox you can use. A scope you can trust.' })).toBeVisible();
+  await page.getByText('Can I move real money through Kora?').click();
+  await expect(page.getByText('Funds and providers in the current Nigerian sandbox are simulated.')).toBeVisible();
   await page.screenshot({ path: '.sandbox/screenshots/landing.png', fullPage: true });
   await page.getByRole('button', { name: 'POST /v1/intents' }).click();
   await expect(page.locator('.endpoint-list')).toContainText('/v1/intents');
@@ -42,6 +45,8 @@ test('landing page stays readable and actionable on mobile', async ({ page }) =>
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'One payment flow. Complete visibility.' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('link', { name: "Today's sandbox" }).click();
+  await expect(page.getByRole('heading', { name: 'Nigeria local sandbox' })).toBeInViewport();
   await page.screenshot({ path: '.sandbox/screenshots/landing-mobile.png', fullPage: true });
   await page.getByRole('button', { name: 'Explore the sandbox' }).click();
   await expect(page).toHaveURL(/\/app\/overview$/);

@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kora_public
+      POSTGRES_PASSWORD: ${KORA_PUBLIC_DB_PASSWORD:?Set KORA_PUBLIC_DB_PASSWORD in .env.public}
+      POSTGRES_DB: kora_public
+    volumes:
+      - kora-public-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kora_public -d kora_public"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    image: kora-api:latest
+    build: .
+    restart: unless-stopped
+    env_file: .env.public
+    environment:
+      DATABASE_URL: postgres://kora_public:${KORA_PUBLIC_DB_PASSWORD}@db:5432/kora_public
+      HOST: 0.0.0.0
+      PORT: 4312
+      KORA_MODE: sandbox
+    ports:
+      - "127.0.0.1:4312:4312"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["sh", "-c", "pnpm db:migrate && exec pnpm start"]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4312/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  worker:
+    image: kora-api:latest
+    restart: unless-stopped
+    env_file: .env.public
+    environment:
+      DATABASE_URL: postgres://kora_public:${KORA_PUBLIC_DB_PASSWORD}@db:5432/kora_public
+      KORA_MODE: sandbox
+    depends_on:
+      api:
+        condition: service_healthy
+    command: ["pnpm", "worker"]
+
+volumes:
+  kora-public-postgres:

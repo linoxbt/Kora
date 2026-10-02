@@ -270,6 +270,51 @@ export function LandingPage({
           </p>
         </section>
 
+        <section className="site-section site-now" id="sandbox" aria-labelledby="site-now-title">
+          <div className="site-section-heading">
+            <div>
+              <span className="site-section-kicker">WHERE KORA STANDS TODAY</span>
+              <h2 id="site-now-title">
+                A sandbox you can use.
+                <br />
+                <em>A scope you can trust.</em>
+              </h2>
+            </div>
+            <p>
+              Start with a simulated Nigerian payment, inspect the route, and follow its evidence
+              through to the ledger. Every surface says what is running today.
+            </p>
+          </div>
+          <div className="site-now-grid">
+            <article className="site-now-card site-now-card-primary">
+              <span className="site-now-state"><i /> AVAILABLE NOW</span>
+              <h3>Nigeria local sandbox</h3>
+              <p>Try NGN local routing with simulated funds and providers in a prefunded workspace.</p>
+              <div className="site-now-path" aria-label="Sandbox payment journey">
+                <span>Intent</span><ArrowRight size={14} /><span>Route</span><ArrowRight size={14} />
+                <span>Receipt</span><ArrowRight size={14} /><span>Ledger</span>
+              </div>
+              <button className="site-now-link" onClick={start}>
+                Open a workspace <ArrowUpRight size={16} />
+              </button>
+            </article>
+            <article className="site-now-card">
+              <span className="site-now-state">SEPARATE TESTNET FLOW</span>
+              <h3>Stellar Testnet staging</h3>
+              <p>Explore a testnet staging path for USDC. It does not send live funds or enable a cross-border corridor.</p>
+              <button className="site-now-link" onClick={() => go('/docs')}>
+                Read the integration guide <ArrowUpRight size={16} />
+              </button>
+            </article>
+            <article className="site-now-card">
+              <span className="site-now-state">NOT ENABLED</span>
+              <h3>Live cross-border payments</h3>
+              <p>A second-country corridor and live provider settlement are outside the current sandbox.</p>
+              <div className="site-now-caption">Clear boundaries are part of the product.</div>
+            </article>
+          </div>
+        </section>
+
         <section className="site-section site-developers" id="developers">
           <div className="site-developer-copy">
             <span className="site-section-kicker">FOR DEVELOPERS</span>
@@ -313,6 +358,32 @@ export function LandingPage({
           </div>
         </section>
 
+        <section className="site-section site-faq" id="faq" aria-labelledby="site-faq-title">
+          <div>
+            <span className="site-section-kicker">GOOD TO KNOW</span>
+            <h2 id="site-faq-title">A few straight answers.</h2>
+            <p>Know what to expect before you start building.</p>
+          </div>
+          <div className="site-faq-list">
+            <details>
+              <summary>Can I move real money through Kora?</summary>
+              <p>No. Funds and providers in the current Nigerian sandbox are simulated. Live payments are not enabled.</p>
+            </details>
+            <details>
+              <summary>What can I test today?</summary>
+              <p>Create intents and quotes, inspect local routing, test uncertain outcomes, and reconcile receipts and ledger entries. Stellar Testnet staging is available separately.</p>
+            </details>
+            <details>
+              <summary>Does Kora support cross-border settlement?</summary>
+              <p>Not yet. The current working route is Nigeria to Nigeria in sandbox mode; a second-country corridor is not enabled.</p>
+            </details>
+            <details>
+              <summary>Where do I begin integrating?</summary>
+              <p>Open a sandbox workspace to explore the flow, then use the API reference and typed SDK to build against it.</p>
+            </details>
+          </div>
+        </section>
+
         <section className="site-final-cta">
           <div>
             <span className="site-section-kicker">START BUILDING</span>
@@ -345,6 +416,8 @@ export function LandingPage({
             <b>Explore</b>
             <a href="#platform">Platform</a>
             <a href="#how-it-works">How it works</a>
+            <a href="#sandbox">Today's sandbox</a>
+            <a href="#faq">FAQ</a>
             <button onClick={start}>Sandbox</button>
           </div>
           <div>

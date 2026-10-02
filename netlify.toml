@@ -3,6 +3,30 @@
   publish = "apps/web/dist"
 
 [[redirects]]
+  from = "/console/*"
+  to = "https://kora-api.13-140-188-185.sslip.io/console/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/v1/*"
+  to = "https://kora-api.13-140-188-185.sslip.io/v1/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/openapi.json"
+  to = "https://kora-api.13-140-188-185.sslip.io/openapi.json"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/reference/*"
+  to = "https://kora-api.13-140-188-185.sslip.io/reference/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/docs"
   to = "/index.html"
   status = 200
