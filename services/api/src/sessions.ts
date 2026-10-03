@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { pool, transaction, id, type Client } from '../../../packages/database/src/index.js';
@@ -6,6 +6,8 @@ import { authenticate, hashKey, type Principal } from '../../../packages/payment
 import { PaymentError } from '../../../packages/payments/src/errors.js';
 import { provisionWorkspace } from './workspace.js';
 import { identityPrincipal, privyConfiguration, privyVerifier, type TeamRole } from './identity.js';
+import { codeHash, mailer, type PersonalOptions } from './personal.js';
+import { accountId, postJournal } from '../../../packages/ledger/src/index.js';
 declare module 'fastify' {
   interface FastifyInstance {
     consoleAppId: string;
@@ -14,7 +16,7 @@ declare module 'fastify' {
 export interface ConsoleSession {
   principal: Principal;
   csrf_token: string;
-  auth_method: 'privy' | 'api_key' | 'sandbox';
+  auth_method: 'privy' | 'email' | 'api_key' | 'sandbox';
   identity_id: string | null;
   role: TeamRole | null;
 }
@@ -22,7 +24,7 @@ export function consoleOrigin(request: FastifyRequest) {
   const origin = request.headers.origin;
   const allowed = (
     process.env.KORA_CONSOLE_ORIGINS ??
-    'http://127.0.0.1:4310,http://localhost:4310,http://localhost:5173,http://127.0.0.1:5173'
+    'http://127.0.0.1:4310,http://localhost:4310,http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:5176,http://localhost:5176'
   )
     .split(',')
     .map((x) => x.trim());
@@ -35,7 +37,7 @@ export async function readSession(request: FastifyRequest): Promise<ConsoleSessi
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   const row = (
     await pool.query(
-      "SELECT s.merchant_id,s.csrf_token,s.auth_method,s.identity_id,cm.role,k.id,k.scopes,k.operator_id FROM sessions s JOIN api_keys k ON k.id=s.api_key_id AND k.merchant_id=s.merchant_id JOIN merchants m ON m.id=s.merchant_id LEFT JOIN console_identities a ON a.id=s.identity_id LEFT JOIN console_memberships cm ON cm.identity_id=s.identity_id AND cm.merchant_id=s.merchant_id AND cm.api_key_id=s.api_key_id WHERE m.mode='sandbox' AND s.token_hash=$1 AND s.expires_at>now() AND k.revoked_at IS NULL AND (s.identity_id IS NULL OR a.disabled_at IS NULL AND a.app_id=$2 AND cm.revoked_at IS NULL AND cm.id IS NOT NULL)",
+      "SELECT s.merchant_id,s.csrf_token,s.auth_method,s.identity_id,cm.role,k.id,k.scopes,k.operator_id FROM sessions s JOIN api_keys k ON k.id=s.api_key_id AND k.merchant_id=s.merchant_id JOIN merchants m ON m.id=s.merchant_id LEFT JOIN console_identities a ON a.id=s.identity_id LEFT JOIN console_memberships cm ON cm.identity_id=s.identity_id AND cm.merchant_id=s.merchant_id AND cm.api_key_id=s.api_key_id WHERE m.mode='sandbox' AND s.token_hash=$1 AND s.expires_at>now() AND k.revoked_at IS NULL AND (s.identity_id IS NULL OR a.disabled_at IS NULL AND (a.provider='email' AND a.app_id='kora-business' OR a.provider='privy' AND a.app_id=$2) AND cm.revoked_at IS NULL AND cm.id IS NOT NULL)",
       [hashKey(token), request.server.consoleAppId],
     )
   ).rows[0];
@@ -115,9 +117,51 @@ async function createSession(
   sessionCookie(request, reply, result.token);
   return result.body;
 }
-export async function registerSessions(app: FastifyInstance, config = privyConfiguration()) {
+export async function registerSessions(app: FastifyInstance, config = privyConfiguration(), emailOptions: PersonalOptions = {}) {
   app.decorate('consoleAppId', config.appId);
   const verifier = privyVerifier(config);
+  const secret = emailOptions.codeSecret ?? process.env.KORA_AUTH_SECRET;
+  const sendCode = emailOptions.sendCode ?? mailer();
+  app.get('/business/api/auth/config', async () => ({ enabled: !!(secret && sendCode), method: 'email_code' }));
+  app.post('/business/api/auth/start', { config: { rateLimit: { max: 5, timeWindow: '1 hour' } } }, async (request) => {
+    consoleOrigin(request);
+    if (!secret || !sendCode) throw new PaymentError(503, 'email_unavailable', 'Email sign-in is not configured');
+    const { email } = z.object({ email: z.string().trim().toLowerCase().email().max(254) }).strict().parse(request.body);
+    const latest = (await pool.query('SELECT created_at FROM business_email_challenges WHERE email=$1 ORDER BY created_at DESC LIMIT 1', [email])).rows[0];
+    if (latest && Date.now()-new Date(latest.created_at).getTime()<60_000)
+      throw new PaymentError(429,'code_recently_sent','Wait a minute before requesting another code');
+    const challengeId = id('otp'), code = String(randomInt(0,1_000_000)).padStart(6,'0');
+    await pool.query("INSERT INTO business_email_challenges(id,email,code_hash,expires_at) VALUES($1,$2,$3,now()+interval '10 minutes')",[challengeId,email,codeHash(secret,challengeId,code)]);
+    try { await sendCode(email,code); }
+    catch { await pool.query('DELETE FROM business_email_challenges WHERE id=$1',[challengeId]); throw new PaymentError(503,'email_unavailable','Email delivery is temporarily unavailable'); }
+    return { sent: true, challenge_id: challengeId };
+  });
+  app.post('/business/api/auth/verify', { config: { rateLimit: { max: 10, timeWindow: '1 hour' } } }, async (request, reply) => {
+    consoleOrigin(request);
+    if (!secret || !sendCode) throw new PaymentError(503,'email_unavailable','Email sign-in is not configured');
+    const { challenge_id, code, name, link_current, invite_token } = z.object({ challenge_id: z.string().regex(/^otp_[a-f0-9]{32}$/), code: z.string().regex(/^[0-9]{6}$/), name: z.string().trim().min(1).max(80).default('My Kora business'), link_current: z.boolean().default(false), invite_token: z.string().regex(/^kora_inv_[a-f0-9]{64}$/).optional() }).strict().parse(request.body);
+    if (link_current && invite_token) throw new PaymentError(400,'login_options_conflict','Choose one workspace action');
+    const previous = await readSession(request);
+    if (previous) requireCsrf(request,previous);
+    if (link_current && !previous) throw new PaymentError(401,'workspace_session_required','Open your sandbox workspace before saving it');
+    const result = await transaction(async (c) => {
+      const challenge = (await c.query('SELECT * FROM business_email_challenges WHERE id=$1 FOR UPDATE',[challenge_id])).rows[0];
+      if (!challenge || challenge.consumed_at || challenge.attempts>=5 || new Date(challenge.expires_at).getTime()<=Date.now())
+        throw new PaymentError(401,'invalid_code','Code is invalid or expired');
+      if (!timingSafeEqual(Buffer.from(challenge.code_hash),Buffer.from(codeHash(secret,challenge_id,code)))) {
+        await c.query('UPDATE business_email_challenges SET attempts=attempts+1 WHERE id=$1',[challenge_id]);
+        return null;
+      }
+      await c.query('UPDATE business_email_challenges SET consumed_at=now() WHERE id=$1',[challenge_id]);
+      const identity = await identityPrincipal(c,{ provider:'email', app_id:'kora-business', subject:`email:${challenge.email}` },name,link_current?previous?.principal:undefined,{inviteToken:invite_token});
+      if (link_current)
+        await c.query('UPDATE organizations SET kyb_required=true,kyb_state=\'not_started\',updated_at=now() WHERE legacy_merchant_id=$1',[identity.principal.merchant_id]);
+      return persistSession(c,identity.principal,request,'email',identity.identity_id,identity.role);
+    });
+    if (!result) throw new PaymentError(401,'invalid_code','Code is invalid or expired');
+    sessionCookie(request,reply,result.token);
+    return result.body;
+  });
   app.get('/console/auth/config', async (_request, reply) => {
     reply.header('cache-control', 'no-store');
     const enabled = await verifier.ready();
@@ -259,6 +303,30 @@ export async function registerSessions(app: FastifyInstance, config = privyConfi
       );
     return session;
   };
+  app.get('/business/api/account', async (request) => {
+    const session = await requireIdentity(request);
+    const row = (await pool.query('SELECT o.id,o.name,o.kyb_state,o.kyb_required FROM organizations o WHERE o.legacy_merchant_id=$1',[session.principal.merchant_id])).rows[0];
+    return { ...row, mode: 'sandbox' };
+  });
+  app.post('/business/api/sandbox/verify', async (request) => {
+    const session = await requireOwner(request);
+    requireCsrf(request,session);
+    if (session.auth_method !== 'email') throw new PaymentError(403,'email_login_required','Sign in to your Business account');
+    z.object({ acknowledge_simulation: z.literal(true) }).strict().parse(request.body);
+    return transaction(async (c) => {
+      const organization=(await c.query('SELECT kyb_state,kyb_required,sandbox_funding_on_approval FROM organizations WHERE legacy_merchant_id=$1 FOR UPDATE',[session.principal.merchant_id])).rows[0];
+      if(!organization?.kyb_required) throw new PaymentError(403,'business_account_required','Open a Kora Business account first');
+      if(organization.kyb_state!=='sandbox_approved') {
+        if(organization.sandbox_funding_on_approval)
+          await postJournal(c,{reference:`business:sandbox-fund:${session.principal.merchant_id}`,description:'Business sandbox NGN fixture',entries:[
+            {account_id:accountId(session.principal.merchant_id,'NGN','available'),side:'debit',amount:'250000000'},
+            {account_id:accountId(null,'NGN','funding'),side:'credit',amount:'250000000'},
+          ]});
+        await c.query("UPDATE organizations SET kyb_state='sandbox_approved',updated_at=now() WHERE legacy_merchant_id=$1",[session.principal.merchant_id]);
+      }
+      return { kyb_state: 'sandbox_approved', message: 'Approved for simulated Business activity only. This is not real KYB.' };
+    });
+  });
   app.get('/console/workspaces', async (request, reply) => {
     reply.header('cache-control', 'no-store');
     const session = await requireIdentity(request);
@@ -297,7 +365,7 @@ export async function registerSessions(app: FastifyInstance, config = privyConfi
           operator_id: row.operator_id,
         },
         request,
-        'privy',
+        session.auth_method === 'email' ? 'email' : 'privy',
         session.identity_id,
         row.role,
       );

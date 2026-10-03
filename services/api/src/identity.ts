@@ -85,7 +85,7 @@ export function privyVerifier(config: PrivyConfig) {
 
 export async function identityPrincipal(
   c: Client,
-  verified: { app_id: string; subject: string },
+  verified: { app_id: string; subject: string; provider?: 'privy' | 'email' },
   name: string,
   claim?: Principal,
   options: { inviteToken?: string; workspaceId?: string } = {},
@@ -95,8 +95,8 @@ export async function identityPrincipal(
   ]);
   const identity = (
     await c.query(
-      "INSERT INTO console_identities(id,provider,app_id,subject) VALUES($1,'privy',$2,$3) ON CONFLICT(provider,app_id,subject) DO UPDATE SET subject=EXCLUDED.subject RETURNING id,disabled_at",
-      [id('acct'), verified.app_id, verified.subject],
+      "INSERT INTO console_identities(id,provider,app_id,subject) VALUES($1,$2,$3,$4) ON CONFLICT(provider,app_id,subject) DO UPDATE SET subject=EXCLUDED.subject RETURNING id,disabled_at",
+      [id('acct'), verified.provider ?? 'privy', verified.app_id, verified.subject],
     )
   ).rows[0];
   if (identity.disabled_at)
@@ -225,12 +225,12 @@ export async function identityPrincipal(
   } else {
     const merchant = id('mcht');
     await createMerchantInTransaction(c, merchant, name);
-    for (const [asset, amount] of [
+    for (const [asset, amount] of ([
       ['NGN', '250000000'],
       ['USDC', '8000000000'],
       ['KES', '75000000'],
       ['GHS', '1200000'],
-    ] as const)
+    ] as const).filter(() => verified.provider !== 'email'))
       await postJournal(c, {
         reference: `${merchant}:fixture:${asset}`,
         description: 'Sandbox fixture funding',
@@ -239,8 +239,10 @@ export async function identityPrincipal(
           { account_id: accountId(null, asset, 'funding'), side: 'credit', amount },
         ],
       });
-    const ownerKey = await issueApiKey(merchant, 'Privy workspace owner', allScopes, c);
+    const ownerKey = await issueApiKey(merchant, 'Business workspace owner', allScopes, c);
     principal = { merchant_id: merchant, key_id: ownerKey.id, scopes: [...allScopes] };
+    if (verified.provider === 'email')
+      await c.query("UPDATE organizations SET kyb_required=true,sandbox_funding_on_approval=true WHERE legacy_merchant_id=$1", [merchant]);
   }
   await c.query(
     'INSERT INTO console_memberships(identity_id,merchant_id,api_key_id) VALUES($1,$2,$3)',

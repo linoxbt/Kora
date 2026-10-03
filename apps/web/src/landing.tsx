@@ -40,27 +40,27 @@ export function LandingPage({
           <div className="site-hero-inner">
             <div className="site-hero-copy">
               <div className="site-kicker">
-                <span className="site-kicker-dot" /> PAYMENT INFRASTRUCTURE, MADE VISIBLE
+                <span className="site-kicker-dot" /> ONE ACCOUNT · ONE NETWORK
               </div>
               <h1 id="site-hero-title">
-                One payment flow.
+                Move value.
                 <br />
-                <em>Complete visibility.</em>
+                <em>Across every boundary.</em>
               </h1>
               <p>
-                Create, route and reconcile payments through one API. Follow the journey from first
-                quote to final ledger entry, with every decision in view.
+                Kora brings people, businesses and financial rails together. Hold a balance, send
+                to someone, or build on the network through one clear account experience.
               </p>
               <div className="site-hero-actions">
-                <button className="site-button site-button-primary" onClick={start}>
-                  Explore the sandbox <ArrowUpRight size={17} />
+                <button className="site-button site-button-primary" onClick={() => go('/personal/login')}>
+                  Explore Personal <ArrowUpRight size={17} />
                 </button>
-                <button className="site-button site-button-text" onClick={() => go('/docs')}>
-                  Read the docs <ArrowRight size={17} />
+                <button className="site-button site-button-text" onClick={() => go('/business/login')}>
+                  Explore Business <ArrowRight size={17} />
                 </button>
               </div>
               <div className="site-hero-footnote">
-                <ShieldCheck size={16} /> Simulated funds and providers. No live payments.
+                <ShieldCheck size={16} /> Currently a sandbox. Funds and providers are simulated.
               </div>
             </div>
             <div className="site-hero-stage" aria-label="Illustrative Kora sandbox route monitor">
@@ -69,7 +69,7 @@ export function LandingPage({
               <div className="site-preview-card">
                 <div className="site-preview-top">
                   <span>
-                    <span className="site-preview-mark">K</span> Kora workspace
+                    <span className="site-preview-mark">K</span> Kora Network
                   </span>
                   <span className="site-preview-mode">
                     <i /> Sandbox
@@ -129,23 +129,23 @@ export function LandingPage({
           <div className="site-hero-base">
             <span>BUILT TO MAKE THE COMPLEX CLEAR</span>
             <button type="button" onClick={start}>
-              Start with a working Nigerian sandbox corridor <ArrowRight size={15} />
+              Start with the Nigerian developer sandbox <ArrowRight size={15} />
             </button>
           </div>
         </section>
 
         <div className="site-capability-strip" aria-label="Kora sandbox capabilities">
           <div>
-            <span>01 / ROUTE</span>
-            <b>Measured local options</b>
+            <span>01 / PERSONAL</span>
+            <b>Use the network</b>
           </div>
           <div>
-            <span>02 / RECOVER</span>
-            <b>Evidence before finality</b>
+            <span>02 / BUSINESS</span>
+            <b>Build on the network</b>
           </div>
           <div>
-            <span>03 / RECONCILE</span>
-            <b>Every unit accounted for</b>
+            <span>03 / NETWORK</span>
+            <b>Move value with proof</b>
           </div>
         </div>
 
@@ -156,12 +156,12 @@ export function LandingPage({
               <h2>
                 One system for the
                 <br />
-                <em>whole payment journey.</em>
+                <em>whole value journey.</em>
               </h2>
             </div>
             <p>
-              From a customer request to a confirmed outcome, Kora keeps the moving parts connected.
-              Build the flow in the sandbox, then inspect what happened.
+              Personal and Business use the same account and settlement foundations. Kora Network
+              connects the ledger, route decision, provider evidence and reconciliation.
             </p>
           </div>
           <div className="site-feature-grid">
@@ -265,8 +265,7 @@ export function LandingPage({
             </div>
           </div>
           <p className="site-workflow-scope">
-            Nigeria/NGN local routing is simulated. Stellar Testnet staging is available separately;
-            a second-country corridor and live payments are not enabled.
+            Nigeria/NGN activity is simulated. A second-country corridor and live payments are not enabled.
           </p>
         </section>
 
@@ -281,29 +280,29 @@ export function LandingPage({
               </h2>
             </div>
             <p>
-              Start with a simulated Nigerian payment, inspect the route, and follow its evidence
-              through to the ledger. Every surface says what is running today.
+              Personal and Business have separate sandbox accounts. Developer tools show how a
+              simulated Nigerian payment travels from instruction to ledger.
             </p>
           </div>
           <div className="site-now-grid">
             <article className="site-now-card site-now-card-primary">
               <span className="site-now-state"><i /> AVAILABLE NOW</span>
-              <h3>Nigeria local sandbox</h3>
-              <p>Try NGN local routing with simulated funds and providers in a prefunded workspace.</p>
+              <h3>Kora Personal sandbox</h3>
+              <p>Enable the sandbox verification fixture, add simulated NGN and send to another eligible Kora Personal account.</p>
               <div className="site-now-path" aria-label="Sandbox payment journey">
-                <span>Intent</span><ArrowRight size={14} /><span>Route</span><ArrowRight size={14} />
-                <span>Receipt</span><ArrowRight size={14} /><span>Ledger</span>
+                <span>Identity</span><ArrowRight size={14} /><span>Balance</span><ArrowRight size={14} />
+                <span>Send</span><ArrowRight size={14} /><span>Activity</span>
               </div>
-              <button className="site-now-link" onClick={start}>
-                Open a workspace <ArrowUpRight size={16} />
+              <button className="site-now-link" onClick={() => go('/personal/login')}>
+                Explore Personal <ArrowUpRight size={16} />
               </button>
             </article>
             <article className="site-now-card">
-              <span className="site-now-state">SEPARATE TESTNET FLOW</span>
-              <h3>Stellar Testnet staging</h3>
-              <p>Explore a testnet staging path for USDC. It does not send live funds or enable a cross-border corridor.</p>
-              <button className="site-now-link" onClick={() => go('/docs')}>
-                Read the integration guide <ArrowUpRight size={16} />
+              <span className="site-now-state">SIMULATED BUSINESS</span>
+              <h3>Kora Business sandbox</h3>
+              <p>Use a separate Business account with a sandbox KYB fixture. Inspect settlement activity and developer tools.</p>
+              <button className="site-now-link" onClick={() => go('/business/login')}>
+                Explore Business <ArrowUpRight size={16} />
               </button>
             </article>
             <article className="site-now-card">
@@ -371,7 +370,7 @@ export function LandingPage({
             </details>
             <details>
               <summary>What can I test today?</summary>
-              <p>Create intents and quotes, inspect local routing, test uncertain outcomes, and reconcile receipts and ledger entries. Stellar Testnet staging is available separately.</p>
+              <p>Personal can send simulated NGN between eligible accounts. Business developers can create intents and quotes, inspect local routing and reconcile receipts with ledger entries.</p>
             </details>
             <details>
               <summary>Does Kora support cross-border settlement?</summary>
@@ -379,7 +378,7 @@ export function LandingPage({
             </details>
             <details>
               <summary>Where do I begin integrating?</summary>
-              <p>Open a sandbox workspace to explore the flow, then use the API reference and typed SDK to build against it.</p>
+              <p>Open Kora Business for developer tools, then use the API reference and typed SDK to build against the sandbox.</p>
             </details>
           </div>
         </section>
@@ -393,12 +392,11 @@ export function LandingPage({
               <em>for yourself.</em>
             </h2>
             <p>
-              Open a prefunded sandbox workspace, make a test transfer, and follow it all the way to
-              the receipt.
+              Explore Kora Business and follow a simulated transfer from instruction to receipt.
             </p>
           </div>
-          <button className="site-button site-button-light" onClick={start}>
-            Open the sandbox <ArrowUpRight size={17} />
+          <button className="site-button site-button-light" onClick={() => go('/business/login')}>
+            Explore Business <ArrowUpRight size={17} />
           </button>
         </section>
       </main>
@@ -423,7 +421,7 @@ export function LandingPage({
           <div>
             <b>Build</b>
             <button onClick={() => go('/docs')}>Documentation</button>
-            <button onClick={() => go('/login')}>Sign in</button>
+            <button onClick={() => go('/business/login')}>Business sign in</button>
           </div>
         </div>
         <div className="site-footer-bottom">

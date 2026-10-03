@@ -14,6 +14,12 @@ Create an ignored, mode `600` `.env.public` at the repository root. Set
 random secrets. Set `KORA_CONSOLE_ORIGINS` to the exact Netlify HTTPS origin.
 Keep `KORA_MODE=sandbox`, and leave `PAYSTACK_SECRET_KEY` blank for the simulator.
 Never commit this file. The Compose file supplies the internal `DATABASE_URL`.
+Personal and Business email sign-in require `KORA_AUTH_SECRET`, `SMTP_HOST`,
+`SMTP_PORT`, and `SMTP_FROM`; set `SMTP_USER` and `SMTP_PASS` when the SMTP
+service requires authentication. Without these variables, both sign-in forms
+fail closed and the existing Developer Sandbox remains available. The secret
+must remain stable across API restarts because it authenticates outstanding
+one-time codes. Use a delivery service and sender domain under Kora's control.
 
 The HTTPS reverse proxy needs a host entry equivalent to:
 

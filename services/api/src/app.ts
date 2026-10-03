@@ -56,6 +56,7 @@ import { registerStellar } from './stellar.js';
 import type { StellarTestnetConnector } from '../../../connectors/stellar/src/index.js';
 import { registerRails } from './rails.js';
 import { registerProduct } from './product.js';
+import { registerPersonal, type PersonalOptions } from './personal.js';
 import { page, type ListTable } from './pagination.js';
 declare module 'fastify' {
   interface FastifyRequest {
@@ -89,6 +90,7 @@ async function owned(table: ListTable, resourceId: string, merchantId: string) {
   return row;
 }
 export interface ApiOptions {
+  personal?: PersonalOptions;
   privyConfig?: PrivyConfig;
   stellarConnector?: StellarTestnetConnector;
   logger?: boolean;
@@ -245,6 +247,14 @@ export async function buildApi(options: ApiOptions = {}) {
         if (!['GET', 'HEAD'].includes(request.method)) requireCsrf(request, session);
         request.principal = session.principal;
       }
+      if (!['GET', 'HEAD'].includes(request.method) && request.principal) {
+        const organization = (await pool.query(
+          'SELECT kyb_required,kyb_state FROM organizations WHERE legacy_merchant_id=$1',
+          [request.principal.merchant_id],
+        )).rows[0];
+        if (organization?.kyb_required && !['sandbox_approved','verified'].includes(organization.kyb_state))
+          throw new PaymentError(403,'sandbox_kyb_required','Complete the Business sandbox verification fixture before changing financial data');
+      }
     }
   });
   app.addHook('onResponse', async (request, reply) => {
@@ -333,7 +343,8 @@ export async function buildApi(options: ApiOptions = {}) {
     if (
       serveWeb &&
       request.method === 'GET' &&
-      /^\/(?:$|app(?:\/|$)|login(?:\/|$)|connect(?:\/|$)|ramp(?:\/|$)|docs(?:\/|$))/.test(request.url)
+      !/^\/(?:personal|business)\/api(?:\/|$)/.test(request.url) &&
+      /^\/(?:$|app(?:\/|$)|personal(?:\/|$)|business(?:\/|$)|sandbox(?:\/|$)|login(?:\/|$)|connect(?:\/|$)|ramp(?:\/|$)|docs(?:\/|$))/.test(request.url)
     )
       return reply.sendFile('index.html');
     return reply.status(404).send({
@@ -610,7 +621,8 @@ export async function buildApi(options: ApiOptions = {}) {
   await registerRails(app, options.paystackClient);
   await registerStellar(app, options.stellarConnector);
   await registerProduct(app);
-  await registerSessions(app, options.privyConfig);
+  await registerPersonal(app, options.personal);
+  await registerSessions(app, options.privyConfig, options.personal);
   app.get('/openapi.json', async () => app.swagger());
   await app.ready();
   return app;

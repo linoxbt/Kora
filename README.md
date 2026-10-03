@@ -1,8 +1,13 @@
 # Kora
 
-African financial interoperability infrastructure connecting banks, fintechs,
-mobile-money networks, Stellar anchors, and liquidity providers through one
-payment interface.
+Kora Personal lets people use the network. Kora Business lets companies build
+on the network. Kora Network is the shared ledger and settlement foundation.
+The current deployment is a sandbox with simulated funds and providers.
+
+The [v2 foundation](docs/v2-foundation.md) adds separate Personal and Business
+email-code identities, explicit KYC/KYB sandbox fixtures, canonical asset
+positions, NGN Personal transfers, dark theme and focused account navigation.
+Real-money capabilities remain staged behind partner and control gates.
 
 Kora is being built in tested phases. **Phases 0–2 implement the sandbox
 financial core, payment engine, and product.** The dashboard and hosted flow
@@ -34,7 +39,8 @@ backup/restore drills.** Live activation remains unavailable.
 - Developer key management, redacted request logs and webhook replay controls.
 - Operations debugger with holds, attempts, receipts and per-asset journals.
 - HttpOnly console sessions, CSRF checks and isolated prefunded workspaces.
-- Email-only Privy login page, verified account ownership and persistent workspace access.
+- Legacy Privy-backed workspace sessions and persistent workspace access; new
+  Personal and Business sign-ins use Kora-managed email codes when SMTP is configured.
 - Generated OpenAPI, interactive reference and packaged TypeScript SDK.
 
 - Paystack test-mode name enquiry, verified NGN recipients, collections and payouts.
@@ -67,7 +73,7 @@ pnpm start
 ```
 
 In a second terminal, run `pnpm worker`. Open `http://127.0.0.1:4310` and choose
-**Explore the sandbox → Start sandbox**. This creates an isolated workspace
+**Developer Sandbox → Start sandbox**. This creates an isolated workspace
 with journaled fixture balances and seven actual simulated payment outcomes.
 The guest workspace endpoint accepts only configured console origins and is
 rate limited; it cannot fund an existing merchant or issue browser-visible keys.

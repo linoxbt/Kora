@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 export const assets = [
   {
     id: 'XLM',
+    positionId: 'pos_xlm_test',
     code: 'XLM',
     name: 'Testnet network fee',
     scale: 7,
@@ -17,6 +18,7 @@ export const assets = [
   },
   {
     id: 'KUSD',
+    positionId: 'pos_kusd_test',
     code: 'KUSD',
     name: 'Kora Test USD',
     scale: 7,
@@ -31,6 +33,7 @@ export const assets = [
   },
   {
     id: 'NGN',
+    positionId: 'pos_ngn_fiat',
     code: 'NGN',
     name: 'Nigerian naira',
     scale: 2,
@@ -43,6 +46,7 @@ export const assets = [
   },
   {
     id: 'KES',
+    positionId: 'pos_kes_fiat',
     code: 'KES',
     name: 'Kenyan shilling',
     scale: 2,
@@ -55,6 +59,7 @@ export const assets = [
   },
   {
     id: 'GHS',
+    positionId: 'pos_ghs_fiat',
     code: 'GHS',
     name: 'Ghanaian cedi',
     scale: 2,
@@ -67,6 +72,7 @@ export const assets = [
   },
   {
     id: 'USDC',
+    positionId: 'pos_usdc_sim',
     code: 'USDC',
     name: 'USD Coin',
     scale: 6,
@@ -102,6 +108,9 @@ export function asset(id: string) {
   const found = assets.find((a) => a.id === id);
   if (!found) throw new Error('Unsupported asset');
   return found;
+}
+export function assetPositionId(id: AssetId): string {
+  return asset(id).positionId;
 }
 export function minor(value: string): bigint {
   if (!/^(0|[1-9]\d{0,23})$/.test(value))

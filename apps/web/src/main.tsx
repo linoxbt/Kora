@@ -37,8 +37,12 @@ import { NetworkPage } from './network.js';
 import { ControlsPage } from './controls.js';
 import { StellarPage } from './stellar.js';
 import { LocalRailPage } from './local-rail.js';
-import { LoginPage, AccountPage, type Session } from './login.js';
+import type { Session } from './login.js';
+import { AccountPage } from './account.js';
 import { LandingPage } from './landing.js';
+import { PersonalPage } from './personal.js';
+import { BusinessLogin } from './business-login.js';
+import './theme.css';
 type Intent = Model<'Intent'>;
 type Asset = Model<'AssetList'>['data'][number];
 const codes = ['NGN', 'KES', 'GHS', 'USDC'] as const;
@@ -98,7 +102,7 @@ function Logo() {
           fill="currentColor"
         />
       </svg>
-      kora<span className="logo-dot">.</span>
+      kora
     </span>
   );
 }
@@ -1107,6 +1111,27 @@ function Overview({
     </>
   );
 }
+function BusinessOverview({ api, go }: { api: Kora; go: (path: string) => void }) {
+  const balances = useLoad(() => api.listBalances(), [api]);
+  const ngnAvailable = balances.value?.data.find((b) => b.asset === 'NGN' && b.purpose === 'available')?.minor ?? '0';
+  const ngnHeld = balances.value?.data.find((b) => b.asset === 'NGN' && b.purpose === 'reserved')?.minor ?? '0';
+  return <>
+    <div className="welcome"><div><span className="eyebrow">KORA BUSINESS · SANDBOX</span><h1>Your business, in one place.</h1><p>Manage a simulated NGN position and explore settlement tools.</p></div></div>
+    {balances.error && <Notice>{balances.error}</Notice>}
+    <section className="business-balance-card"><span>AVAILABLE · SIMULATED NGN</span><strong>₦{decimal(ngnAvailable,'NGN')}</strong><small>NGN fiat position · No bank deposit or live payout is connected.</small></section>
+    <div className="business-overview-grid">
+      <section className="card"><span className="eyebrow">BALANCES</span><h2>Know what is available.</h2><p>See available and reserved NGN separately. The ledger records each change.</p><b>Reserved: ₦{decimal(ngnHeld,'NGN')}</b><button className="button subtle" onClick={()=>go('/app/assets')}>View balances <ArrowRight size={16}/></button></section>
+      <section className="card"><span className="eyebrow">PAYMENTS</span><h2>Track each outcome.</h2><p>Follow a sandbox settlement from request through receipt and reconciliation.</p><button className="button subtle" onClick={()=>go('/app/transactions')}>View payments <ArrowRight size={16}/></button></section>
+      <section className="card"><span className="eyebrow">DEVELOPERS</span><h2>Build with clear contracts.</h2><p>Find API keys, signed webhooks, request logs and the isolated Developer Sandbox.</p><button className="button subtle" onClick={()=>go('/app/developers')}>Open developers <ArrowRight size={16}/></button></section>
+    </div>
+  </>;
+}
+function BusinessBalances({ api }: { api: Kora }) {
+  const balances=useLoad(()=>api.listBalances(),[api]);
+  const available=balances.value?.data.find(b=>b.asset==='NGN'&&b.purpose==='available')?.minor??'0';
+  const reserved=balances.value?.data.find(b=>b.asset==='NGN'&&b.purpose==='reserved')?.minor??'0';
+  return <><div className="page-heading"><div><span className="eyebrow">CANONICAL POSITION</span><h1>Balances</h1><p>Your current Business sandbox position, by availability.</p></div></div>{balances.error&&<Notice>{balances.error}</Notice>}<section className="card business-position"><div><span>Asset</span><b>NGN · Nigerian naira</b></div><div><span>Network</span><b>Fiat Nigeria · simulated</b></div><div><span>Available</span><b>₦{decimal(available,'NGN')}</b></div><div><span>Reserved</span><b>₦{decimal(reserved,'NGN')}</b></div><p>Other currencies and networks remain in the Developer Sandbox until their full deposit, withdrawal and reconciliation paths are ready.</p></section></>;
+}
 function AssetsPage({ api }: { api: Kora }) {
   const data = useLoad(() => Promise.all([api.listAssets(), api.listBalances()]), [api]);
   return (
@@ -1341,7 +1366,7 @@ function CustomerInstruments({ api, customer }: { api: Kora; customer: Model<'Cu
     </>
   );
 }
-function DevelopersPage({ api, session }: { api: Kora; session: Session }) {
+function DevelopersPage({ api, session, go }: { api: Kora; session: Session; go: (path: string) => void }) {
   const [tab, setTab] = useState('keys'),
     [secret, setSecret] = useState(''),
     [error, setError] = useState(''),
@@ -1398,6 +1423,15 @@ function DevelopersPage({ api, session }: { api: Kora; session: Session }) {
           Download OpenAPI <Download size={16} />
         </a>
       </div>
+      <section className="card developer-sandbox-tools">
+        <div className="card-heading"><h3>Developer Sandbox</h3><span className="badge sandbox">Simulated</span></div>
+        <p className="muted">Inspect route, rail and testnet fixtures separately from the Business account.</p>
+        <div className="developer-tool-links">
+          {([['network','Route simulator'],['rail','NGN local rail'],['stellar','Stellar Testnet'],['operations','Operations'],['controls','Pilot controls']] as const)
+            .filter(([id]) => !['operations','controls'].includes(id) || session.scopes?.includes('operations:read'))
+            .map(([id,label]) => <button className="button subtle" key={id} onClick={() => go('/app/'+id)}>{label} <ArrowUpRight size={14}/></button>)}
+        </div>
+      </section>
       <div className="tabs">
         {[
           ['keys', 'API keys'],
@@ -1891,18 +1925,25 @@ function Docs() {
 }
 const nav = [
   ['overview', 'Overview', LayoutDashboard],
-  ['transactions', 'Transactions', ArrowLeftRight],
-  ['network', 'Network', Globe2],
-  ['assets', 'Assets & balances', Wallet],
-  ['rail', 'Local rail', Wallet],
-  ['stellar', 'Stellar Testnet', Wallet],
-  ['customers', 'Customers', Users],
+  ['transactions', 'Payments', ArrowLeftRight],
+  ['assets', 'Balances', Wallet],
   ['developers', 'Developers', Code2],
-  ['operations', 'Operations', Activity],
-  ['controls', 'Pilot controls', ShieldCheck],
-  ['account', 'Account & access', ShieldCheck],
+  ['account', 'Settings', ShieldCheck],
 ] as const;
+function BusinessVerification({ session, onApproved }: { session: Session; onApproved: () => void }) {
+  const [account,setAccount]=useState<{ kyb_required:boolean; kyb_state:string }>();
+  const [error,setError]=useState('');
+  const refresh=()=>fetch('/business/api/account',{credentials:'include'}).then(r=>r.json()).then(setAccount).catch(()=>setError('Business verification status is unavailable.'));
+  useEffect(()=>{if(session.auth_method==='email')void refresh();},[session.auth_method]);
+  if(session.auth_method!=='email'||!account?.kyb_required) return null;
+  return <section className="card business-verification"><span className="eyebrow">BUSINESS VERIFICATION</span><h2>{account.kyb_state==='sandbox_approved'?'Sandbox access approved':'Verify your Business sandbox'}</h2><p>{account.kyb_state==='sandbox_approved'?'Your sandbox fixture permits simulated activity. Real settlement will require actual KYB and partner approval.':'Before creating simulated payments or API keys, explicitly enable the Business KYB test fixture. This is not real company verification.'}</p>{error&&<Notice>{error}</Notice>}{account.kyb_state!=='sandbox_approved'&&<button className="button primary" onClick={()=>void fetch('/business/api/sandbox/verify',{method:'POST',credentials:'include',headers:{'content-type':'application/json','x-kora-csrf':session.csrf_token??''},body:JSON.stringify({acknowledge_simulation:true})}).then(async r=>{if(!r.ok)throw new Error((await r.json()).error?.message??'Verification failed');onApproved();}).catch(e=>setError(e.message))}>Enable simulated activity <ArrowRight size={15}/></button>}</section>;
+}
 function App() {
+  const [theme, setTheme] = useState<'dark' | 'light'>(() =>
+    localStorage.getItem('kora-theme') === 'light' ? 'light' : 'dark',
+  );
+  useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('kora-theme', theme); }, [theme]);
+  const themeToggle = <button className="theme-toggle" aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? 'Light' : 'Dark'} theme</button>;
   const [path, go] = usePath(),
     [session, setSession] = useState<Session>(),
     [error, setError] = useState(''),
@@ -1976,21 +2017,19 @@ function App() {
             <a href="#how-it-works">How it works</a>
           </>
         )}
+        <button onClick={() => go('/personal/login')}>Personal</button>
+        <button onClick={() => go('/business/login')}>Business</button>
         <button onClick={() => go('/docs')}>Developers</button>
-        {path !== '/' && (
-          <button onClick={() => go('/ramp')}>
-            Hosted flow <ArrowUpRight size={14} />
-          </button>
-        )}
       </nav>
+      {themeToggle}
       {!session?.authenticated && (
-        <button className="public-login text-button" onClick={() => go('/login')}>
+        <button className="public-login text-button" onClick={() => go('/personal/login')}>
           Sign in
         </button>
       )}
       <button
         className="button primary"
-        onClick={() => go(session?.authenticated ? '/app/overview' : '/connect')}
+        onClick={() => go(session?.authenticated ? '/app/overview' : '/personal/login')}
       >
         {session?.authenticated ? 'Open workspace' : 'Get started'}
         <ArrowRight size={16} />
@@ -2008,6 +2047,10 @@ function App() {
         </footer>
       </>
     );
+  if (path.startsWith('/personal'))
+    return <PersonalPage go={go} path={path} brand={<Logo />} themeToggle={themeToggle} />;
+  if (path === '/business/login' || path === '/login' || path === '/login/save')
+    return <BusinessLogin brand={<Logo />} go={go} themeToggle={themeToggle} session={session} saveWorkspace={path === '/login/save'} onSession={setSession} />;
   if (path === '/')
     return (
       <LandingPage
@@ -2024,27 +2067,8 @@ function App() {
         <p>Connecting to your workspace…</p>
       </div>
     );
-  if (
-    path === '/login' ||
-    path === '/login/save' ||
-    (!session.authenticated && path.startsWith('/app'))
-  )
-    return (
-      <>
-        {topNav}
-        <LoginPage
-          key={path}
-          session={session}
-          visual={<Network />}
-          go={go}
-          saveWorkspace={path === '/login/save' && session.authenticated}
-          onSession={(next) => {
-            setSession(next);
-            go('/app/overview');
-          }}
-        />
-      </>
-    );
+  if (!session.authenticated && path.startsWith('/app'))
+    return <BusinessLogin brand={<Logo />} go={go} themeToggle={themeToggle} session={session} onSession={setSession} />;
   if (!session.authenticated || path === '/connect')
     return (
       <>
@@ -2144,17 +2168,14 @@ function App() {
           <span className="workspace-icon">{merchant.value?.name.slice(0, 1) ?? 'K'}</span>
           <div>
             <b>{merchant.value?.name ?? 'Workspace'}</b>
-            <small>Sandbox workspace</small>
+            <small>{session.auth_method === 'email' ? 'Business account · Sandbox' : 'Developer Sandbox'}</small>
           </div>
           <ChevronDown size={15} />
         </button>
-        <span className="sidebar-label">WORKSPACE</span>
+        <span className="sidebar-label">BUSINESS</span>
         <nav>
           {nav
-            .filter(([id]) => {
-              if (id === 'developers') return can('keys:read');
-              return !['operations', 'controls'].includes(id) || can('operations:read');
-            })
+            .filter(([id]) => id !== 'developers' || can('keys:read'))
             .map(([id, label, Icon]) => (
               <button
                 key={id}
@@ -2179,7 +2200,7 @@ function App() {
             <p>
               Explore freely.
               <br />
-              Test funds, across every rail.
+              Test funds and eligible routes.
             </p>
             {can('payments:write') && (
               <button onClick={() => go('/ramp')}>
@@ -2218,7 +2239,7 @@ function App() {
               <Menu size={21} />
             </button>
             <span className="breadcrumb">
-              Workspace <ChevronRight size={14} />
+              {session.auth_method === 'email' ? 'Business' : 'Developer Sandbox'} <ChevronRight size={14} />
               <b>{nav.find((n) => n[0] === tab)?.[1] ?? 'Overview'}</b>
             </span>
           </div>
@@ -2232,8 +2253,9 @@ function App() {
           </div>
         </header>
         <main className="content" key={version}>
+          {tab === 'overview' && <BusinessVerification session={session} onApproved={() => setVersion((n) => n + 1)} />}
           {tab === 'overview' ? (
-            <Overview
+            session.auth_method === 'email' ? <BusinessOverview api={api} go={go} /> : <Overview
               api={api}
               onTransfer={() => setTransfer(true)}
               onSelect={setSelected}
@@ -2264,11 +2286,11 @@ function App() {
           ) : tab === 'network' ? (
             <NetworkPage api={api} can={(scope) => !!can(scope)} onSelect={setSelected} />
           ) : tab === 'assets' ? (
-            <AssetsPage api={api} />
+            session.auth_method === 'email' ? <BusinessBalances api={api} /> : <AssetsPage api={api} />
           ) : tab === 'customers' ? (
             <CustomersPage api={api} />
           ) : tab === 'developers' && can('keys:read') ? (
-            <DevelopersPage api={api} session={session} />
+            <DevelopersPage api={api} session={session} go={go} />
           ) : tab === 'account' ? (
             <AccountPage session={session} go={go} onSession={setSession} />
           ) : tab === 'controls' ? (

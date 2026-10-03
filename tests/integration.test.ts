@@ -21,6 +21,29 @@ test('journal references deduplicate retries and reject changed contents', async
   await assert.rejects(sandboxFund(merchant,'NGN','1001',`${merchant}:fund`),{code:'reference_conflict'});
   assert.equal((await amounts(merchant)).available,'1000');
 });
+test('merchant balances have a business account and canonical asset position', async () => {
+  const {merchant}=await fixture();
+  const account=(await pool.query(`SELECT a.owner_type,o.legacy_merchant_id,l.asset_position_id
+    FROM kora_accounts a JOIN organizations o ON o.id=a.organization_id
+    JOIN ledger_accounts l ON l.owner_account_id=a.id
+    WHERE o.legacy_merchant_id=$1 AND l.asset='NGN' AND l.purpose='available'`,[merchant])).rows[0];
+  assert.deepEqual(account,{owner_type:'business',legacy_merchant_id:merchant,asset_position_id:'pos_ngn_fiat'});
+  assert.equal((await balances(merchant)).find(b=>b.asset==='NGN'&&b.purpose==='available')?.asset_position_id,'pos_ngn_fiat');
+});
+test('journals cannot cancel different positions with the same ticker', async () => {
+  const {merchant}=await fixture();
+  const suffix=id('alt');
+  const position=`pos_${suffix}`;
+  await pool.query(`INSERT INTO asset_positions(id,asset_code,network,issuer,form,decimals,environment)
+    VALUES($1,'USDC','sandbox',$2,'simulated',6,'sandbox')`,[position,`lookalike-${suffix}`]);
+  const lookalike=`sys:USDC:lookalike:${suffix}`;
+  await pool.query(`INSERT INTO ledger_accounts(id,asset_position_id,asset,purpose)
+    VALUES($1,$2,'USDC','funding')`,[lookalike,position]);
+  await assert.rejects(transaction(c=>postJournal(c,{reference:id('crosspos'),description:'Invalid cross-position journal',entries:[
+    {account_id:accountId(merchant,'USDC','available'),side:'debit',amount:'10'},
+    {account_id:lookalike,side:'credit',amount:'10'},
+  ]})),{code:'invalid_journal'});
+});
 test('unbalanced and cross-asset journals roll back atomically', async () => {
   const {merchant}=await fixture();
   const reference=id('unbalanced');

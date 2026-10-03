@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { assets, asset, minor, type AssetId } from '../../core/src/index.js';
+import { assets, asset, assetPositionId, minor, type AssetId } from '../../core/src/index.js';
 import { pool, id, transaction, type Client } from '../../database/src/index.js';
 
 export class LedgerError extends Error {
@@ -45,17 +45,31 @@ export async function createMerchantInTransaction(c: Client, merchantId: string,
     "INSERT INTO merchants(id,name,mode) VALUES($1,$2,'sandbox') ON CONFLICT(id) DO NOTHING",
     [merchantId, name],
   );
+  await c.query(
+    'INSERT INTO organizations(id,legacy_merchant_id,name) VALUES($1,$2,$3) ON CONFLICT(legacy_merchant_id) DO NOTHING',
+    [id('org'), merchantId, name],
+  );
+  const organizationId = (
+    await c.query('SELECT id FROM organizations WHERE legacy_merchant_id=$1', [merchantId])
+  ).rows[0].id as string;
+  await c.query(
+    "INSERT INTO kora_accounts(id,owner_type,organization_id) VALUES($1,'business',$2) ON CONFLICT(organization_id) DO NOTHING",
+    [id('acct'), organizationId],
+  );
+  const ownerAccountId = (
+    await c.query('SELECT id FROM kora_accounts WHERE organization_id=$1', [organizationId])
+  ).rows[0].id as string;
   for (const { id: code } of assets) {
     if (code === 'XLM') continue;
     for (const purpose of ['available', 'reserved'])
       await c.query(
-        'INSERT INTO ledger_accounts(id,merchant_id,asset,purpose) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',
-        [accountId(merchantId, code, purpose), merchantId, code, purpose],
+        'INSERT INTO ledger_accounts(id,merchant_id,owner_account_id,asset_position_id,asset,purpose) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING',
+        [accountId(merchantId, code, purpose), merchantId, ownerAccountId, assetPositionId(code), code, purpose],
       );
     for (const purpose of ['clearing', 'fees', 'funding'])
       await c.query(
-        'INSERT INTO ledger_accounts(id,asset,purpose) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',
-        [accountId(null, code, purpose), code, purpose],
+        'INSERT INTO ledger_accounts(id,asset_position_id,asset,purpose) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',
+        [accountId(null, code, purpose), assetPositionId(code), code, purpose],
       );
   }
 }
@@ -68,10 +82,10 @@ export async function balance(c: Client, account: string): Promise<bigint> {
 }
 export async function balances(merchantId: string) {
   const result = await pool.query(
-    "SELECT a.asset,a.purpose,COALESCE(SUM(CASE WHEN e.side='debit' THEN e.amount ELSE -e.amount END),0)::text AS minor FROM ledger_accounts a LEFT JOIN ledger_entries e ON e.account_id=a.id WHERE a.merchant_id=$1 GROUP BY a.asset,a.purpose ORDER BY a.asset,a.purpose",
+    "SELECT a.asset,a.asset_position_id,a.purpose,COALESCE(SUM(CASE WHEN e.side='debit' THEN e.amount ELSE -e.amount END),0)::text AS minor FROM ledger_accounts a LEFT JOIN ledger_entries e ON e.account_id=a.id WHERE a.merchant_id=$1 GROUP BY a.asset,a.asset_position_id,a.purpose ORDER BY a.asset,a.purpose",
     [merchantId],
   );
-  return result.rows as { asset: AssetId; purpose: string; minor: string }[];
+  return result.rows as { asset: AssetId; asset_position_id: string; purpose: string; minor: string }[];
 }
 // Compose with the domain write inside the same PostgreSQL transaction.
 export async function postJournal(c: Client, journal: Journal): Promise<string> {
@@ -119,10 +133,10 @@ export async function postJournal(c: Client, journal: Journal): Promise<string> 
     let delta = 0n;
     for (const e of entries.filter((e) => e.account_id === a.id))
       delta += (e.side === 'debit' ? 1n : -1n) * minor(e.amount);
-    totals.set(a.asset, (totals.get(a.asset) ?? 0n) + delta);
+    totals.set(a.asset_position_id, (totals.get(a.asset_position_id) ?? 0n) + delta);
     if (
-      a.merchant_id &&
-      ['available', 'reserved'].includes(a.purpose) &&
+      (a.merchant_id || a.owner_account_id) &&
+      ['available', 'pending', 'reserved'].includes(a.purpose) &&
       (await balance(c, a.id)) + delta < 0n
     )
       throw new LedgerError('insufficient_funds', 'Insufficient available or reserved funds');

@@ -1,0 +1,57 @@
+.theme-toggle{border:1px solid currentColor;border-radius:100px;background:transparent;color:inherit;padding:8px 12px;font-size:11px;white-space:nowrap;opacity:.8}
+.theme-toggle:hover{opacity:1}
+:root[data-theme='dark']{color-scheme:dark;--green:#d3ef9a;--muted:#a5b8a9;--line:#304338;color:#e9f1e8;background:#0b1512}
+:root[data-theme='dark'] body{background:#0b1512;color:#e9f1e8}
+:root[data-theme='dark'] .site-landing{--site-ink:#ebf5e8;--site-muted:#aabfac;--site-line:#304638;color:#ebf5e8;background:#0b1512}
+:root[data-theme='dark'] .site-landing .public-header{background:#0d1916ed;border-color:#273b30}
+:root[data-theme='dark'] .site-landing .public-header nav a,:root[data-theme='dark'] .site-landing .public-header nav button,:root[data-theme='dark'] .site-landing .public-header .public-login{color:#dae9d7}
+:root[data-theme='dark'] .site-landing .public-header>.button.primary{background:#d3ef9a;border-color:#d3ef9a;color:#193324}
+:root[data-theme='dark'] .site-hero{background:radial-gradient(circle at 83% 15%,#274b32 0%,transparent 33%),linear-gradient(180deg,#111e19,#0c1713)}
+:root[data-theme='dark'] .site-hero h1,:root[data-theme='dark'] .site-section h2,:root[data-theme='dark'] .site-faq h2{color:#eef6e9}
+:root[data-theme='dark'] .site-hero h1 em,:root[data-theme='dark'] .site-section h2 em{color:#c1e18e}
+:root[data-theme='dark'] .site-hero-copy>p,:root[data-theme='dark'] .site-section-heading p,:root[data-theme='dark'] .site-feature-card p,:root[data-theme='dark'] .site-now-card p{color:#afc2af}
+:root[data-theme='dark'] .site-kicker,:root[data-theme='dark'] .site-section-kicker{color:#badb96}
+:root[data-theme='dark'] .site-button-text,:root[data-theme='dark'] .site-hero-base>button{color:#d0eca8}
+:root[data-theme='dark'] .site-button-primary{background:#d3ef9a;color:#193324}
+:root[data-theme='dark'] .site-button-primary:hover{background:#e0f6b6}
+:root[data-theme='dark'] .site-preview-card,:root[data-theme='dark'] .site-evidence-card,:root[data-theme='dark'] .site-capability-strip,:root[data-theme='dark'] .site-feature-card,:root[data-theme='dark'] .site-feature-card:nth-child(2),:root[data-theme='dark'] .site-now-card,:root[data-theme='dark'] .site-now-card-primary{background:#172920;border-color:#304b37;color:#eaf3e4}
+:root[data-theme='dark'] .site-preview-bottom,:root[data-theme='dark'] .site-feature-journal,:root[data-theme='dark'] .site-feature-example{background:#1d3527;border-color:#35513b;color:#d0e3ca}
+:root[data-theme='dark'] .site-preview-amount,:root[data-theme='dark'] .site-preview-step b,:root[data-theme='dark'] .site-feature-card h3,:root[data-theme='dark'] .site-now-card h3,:root[data-theme='dark'] .site-capability-strip b{color:#eef7e8}
+:root[data-theme='dark'] .site-hero-base,:root[data-theme='dark'] .site-capability-strip{border-color:#304838}
+:root[data-theme='dark'] .site-now-link,:root[data-theme='dark'] .site-feature-example{color:#d0eb9d}
+:root[data-theme='dark'] .site-faq-list details{background:#172920;border-color:#304b37;color:#e5f0e3}
+:root[data-theme='dark'] .site-faq-list summary{color:#e5f0e3}
+:root[data-theme='dark'] .site-faq-list details p{color:#b1c3af}
+:root[data-theme='dark'] .app-shell,:root[data-theme='dark'] .app-main,:root[data-theme='dark'] .content{background:#0b1512;color:#e9f1e8}
+:root[data-theme='dark'] .topbar,:root[data-theme='dark'] .card,:root[data-theme='dark'] .modal,:root[data-theme='dark'] .connect-card,:root[data-theme='dark'] .hosted-card{background:#16261e;color:#e9f1e8;border-color:#304638}
+:root[data-theme='dark'] .breadcrumb b,:root[data-theme='dark'] .card h2,:root[data-theme='dark'] .card h3{color:#e9f1e8}
+:root[data-theme='dark'] .button:not(.primary),:root[data-theme='dark'] input,:root[data-theme='dark'] select,:root[data-theme='dark'] textarea{background:#1d3024;color:#e9f1e8;border-color:#3b5541}
+:root[data-theme='dark'] .button.primary{color:#183121}
+:root[data-theme='dark'] .public-header{background:#0d1916;color:#e9f1e8;border-color:#2e4735}
+:root[data-theme='dark'] .login-page,:root[data-theme='dark'] .connect-page,:root[data-theme='dark'] .hosted-page{background:#0b1512;color:#e9f1e8}
+:root[data-theme='dark'] .public-footer{background:#0d1916;color:#afc4ae}
+:root[data-theme='light'] .personal-shell,:root[data-theme='light'] .personal-auth,:root[data-theme='light'] .personal-loading{background:#f8faf6;color:#173829}
+:root[data-theme='light'] .personal-sidebar{background:#eaf1e7;border-color:#d2ddcf}
+:root[data-theme='light'] .personal-brand,:root[data-theme='light'] .personal-auth header>button{color:#173829}
+:root[data-theme='light'] .personal-sidebar-caption,:root[data-theme='light'] .personal-sidebar nav button,:root[data-theme='light'] .personal-sidebar-bottom>button{color:#42624e}
+:root[data-theme='light'] .personal-sidebar nav button.active,:root[data-theme='light'] .personal-sidebar nav button:hover{background:#d7e7d0;color:#1a3b29}
+:root[data-theme='light'] .personal-topbar{border-color:#d8e4d6;color:#587461}
+:root[data-theme='light'] .personal-topbar b,:root[data-theme='light'] .personal-heading h1{color:#173829}
+:root[data-theme='light'] .personal-heading p,:root[data-theme='light'] .personal-muted{color:#5e7864}
+:root[data-theme='light'] .personal-eyebrow{color:#437348}
+:root[data-theme='light'] .personal-card,:root[data-theme='light'] .personal-actions button{background:#fff;border-color:#d7e4d6;color:#173829}
+:root[data-theme='light'] .personal-card>p,:root[data-theme='light'] .personal-card small,:root[data-theme='light'] .personal-profile>div span{color:#647d68}
+:root[data-theme='light'] .personal-card label{color:#314f39}
+:root[data-theme='light'] .personal-card input{background:#f7faf6;border-color:#c4d8c5;color:#173829}
+:root[data-theme='light'] .personal-auth header{border-color:#d8e4d6}
+:root[data-theme='light'] .personal-auth-story>p,:root[data-theme='light'] .personal-auth-proof{color:#517158}
+:root[data-theme='light'] .personal-primary{background:#1c4a32;color:#fff}
+:root[data-theme='light'] .personal-primary:hover{background:#306444}
+:root[data-theme='light'] .personal-sandbox-note{background:#dcebd6;color:#244b31;border-color:#b9d5b4}
+:root[data-theme='light'] .personal-sandbox-note small{color:#56765c}
+:root[data-theme='light'] .personal-mobile-menu{color:#173829}
+@media(max-width:780px){.public-header .theme-toggle{display:inline-flex;align-items:center;justify-content:center;padding:6px;width:32px;height:32px;font-size:0;border-color:#729374}.public-header .theme-toggle::after{content:'◐';font-size:18px}}
+.developer-sandbox-tools{margin:20px 0}.developer-sandbox-tools>p{margin:8px 0 16px}.developer-tool-links{display:flex;flex-wrap:wrap;gap:9px}.business-verification{margin-bottom:24px;border-color:#799453}.business-verification h2{margin:9px 0}.business-verification p{max-width:650px;color:var(--muted);font-size:13px}.business-verification .button{margin-top:17px}
+.business-balance-card{background:linear-gradient(120deg,#203d2b,#183328);border:1px solid #416344;border-radius:20px;padding:35px;min-height:210px;color:#edf6e8;display:grid;align-content:center;gap:15px}.business-balance-card>span{font-size:11px;letter-spacing:1.5px;color:#bad1b5}.business-balance-card strong{font-size:clamp(34px,5vw,54px);letter-spacing:-2px;font-weight:600}.business-balance-card small{color:#b5c9b3}.business-overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:20px 0}.business-overview-grid .card{display:flex;flex-direction:column;gap:14px;padding:25px;min-height:270px}.business-overview-grid .card h2{font-size:22px}.business-overview-grid .card p{font-size:13px;color:var(--muted)}.business-overview-grid .card b{font-size:13px}.business-overview-grid .card button{align-self:start;margin-top:auto}.business-position{max-width:720px}.business-position>div{display:flex;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line);padding:15px 0;font-size:13px}.business-position>div span{color:var(--muted)}.business-position>div b{text-align:right}.business-position p{margin-top:20px;color:var(--muted);font-size:13px}
+:root[data-theme='light'] .business-balance-card{background:linear-gradient(120deg,#1b4a33,#306547)}
+@media(max-width:950px){.business-overview-grid{grid-template-columns:1fr}.business-overview-grid .card{min-height:0}}

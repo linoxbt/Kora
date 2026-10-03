@@ -48,7 +48,7 @@ export default defineConfig({
     },
     strictPort: true,
     proxy: Object.fromEntries(
-      ['/v1', '/console', '/openapi.json', '/reference'].map((path) => [
+      ['/v1', '/console', '/personal/api', '/business/api', '/openapi.json', '/reference'].map((path) => [
         path,
         'http://127.0.0.1:4310',
       ]),

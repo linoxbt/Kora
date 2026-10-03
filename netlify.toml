@@ -9,6 +9,18 @@
   force = true
 
 [[redirects]]
+  from = "/personal/api/*"
+  to = "https://kora-api.13-140-188-185.sslip.io/personal/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/business/api/*"
+  to = "https://kora-api.13-140-188-185.sslip.io/business/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/v1/*"
   to = "https://kora-api.13-140-188-185.sslip.io/v1/:splat"
   status = 200
@@ -48,6 +60,16 @@
 
 [[redirects]]
   from = "/app/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/personal/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/business/*"
   to = "/index.html"
   status = 200
 

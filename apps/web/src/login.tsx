@@ -14,7 +14,7 @@ export type Session = {
   merchant_id?: string;
   key_id?: string;
   scopes?: string[];
-  auth_method?: 'privy' | 'api_key' | 'sandbox';
+  auth_method?: 'privy' | 'email' | 'api_key' | 'sandbox';
   account_saved?: boolean;
   role?: 'owner' | 'viewer' | 'editor' | null;
 };
@@ -76,7 +76,7 @@ export function LoginPage({
         <h1>
           Welcome
           <br />
-          back to <em>Kora.</em>
+          back to <em>Kora</em>
         </h1>
         <p>
           Your payments, balances and connections.
@@ -272,15 +272,17 @@ export function AccountPage({
         </h2>
         <p>
           {session.account_saved
-            ? 'Sign in with the same Privy account on another device to reopen your workspaces.'
+            ? 'Sign in with the same Business email on another device to reopen your workspaces.'
             : 'Save this sandbox to a verified email account to return on another device.'}
         </p>
         <dl>
           <div>
             <dt>Sign-in method</dt>
             <dd>
-              {session.auth_method === 'privy'
-                ? 'Privy email login'
+              {session.auth_method === 'email'
+                ? 'Kora email code'
+                : session.auth_method === 'privy'
+                  ? 'Legacy email login'
                 : session.auth_method === 'sandbox'
                   ? 'Sandbox guest'
                   : 'Workspace session'}
@@ -381,7 +383,7 @@ export function AccountPage({
             onClick={() =>
               void post('/console/team/invitations', { role: inviteRole }).then((result) => {
                 if (result) {
-                  setNewLink(`${window.location.origin}/login#invite=${result.token}`);
+                  setNewLink(`${window.location.origin}/business/login#invite=${result.token}`);
                   setNewInviteId(result.id);
                 }
               })
