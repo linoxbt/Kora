@@ -9,8 +9,13 @@ test('landing presents both Microsendr modes and routes prompts', async ({ page 
   await expect(page.locator('.ms-hero-visual img')).toBeVisible();
   await page.locator('.ms-hero-actions').getByRole('button', { name: 'Get started' }).click();
   await expect(page).toHaveURL(/\/personal\/login$/);
-  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to Personal.' })).toBeVisible();
   await expect(page.getByText('Sign-in is being set up. Please check back soon.')).toBeVisible();
+  await expect(page.getByLabel('Email address')).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Continue with email' })).toBeDisabled();
+  await expect(page).toHaveTitle('Sign in to Personal | Microsendr');
+  await expect(page.getByRole('button', { name: 'Switch to dark theme' })).toHaveCount(0);
+  await expect(page.locator('.ms-personal-login-visual img')).toBeVisible();
   await page.goto('/');
   await page.locator('.ms-hero-actions').getByRole('button', { name: 'For business' }).click();
   await expect(page).toHaveURL(/\/business$/);
@@ -32,6 +37,20 @@ test('phone pages fit without horizontal overflow', async ({ page }) => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     expect(overflow, path).toBeLessThanOrEqual(1);
   }
+});
+
+test('Personal sign-in keeps the form ahead of the photo on phones', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/personal/login');
+  await expect(page.getByRole('heading', { name: 'Sign in to Personal.' })).toBeVisible();
+  const form = await page.locator('.ms-personal-login-panel').boundingBox();
+  const photo = await page.locator('.ms-personal-login-visual').boundingBox();
+  expect(form).not.toBeNull();
+  expect(photo).not.toBeNull();
+  expect(form!.y).toBeLessThan(photo!.y);
+  await expect(page.getByRole('button', { name: 'Talk to us' })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to home' }).click();
+  await expect(page).toHaveURL('/');
 });
 
 test('default theme uses a cream canvas across Microsendr modes', async ({ page }) => {

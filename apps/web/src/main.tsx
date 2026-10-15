@@ -44,6 +44,7 @@ import { BusinessPage } from './business.js';
 import { PersonalPage } from './personal.js';
 import { BusinessLogin } from './business-login.js';
 import './microsendr.css';
+import './personal-login.css';
 type Intent = Model<'Intent'>;
 type Asset = Model<'AssetList'>['data'][number];
 const codes = ['NGN', 'KES', 'GHS', 'USDC'] as const;

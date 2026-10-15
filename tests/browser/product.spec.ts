@@ -43,7 +43,7 @@ test('landing page stays readable and actionable on mobile', async ({ page }) =>
   await expect(page.getByRole('heading', { name: 'Money moves with you.' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator('#platform').getByRole('button', { name: 'Explore Personal' }).click();
-  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to Personal.' })).toBeVisible();
   await page.screenshot({ path: '.sandbox/screenshots/landing-mobile.png', fullPage: true });
   await page.goto('/');
   await page.getByRole('button', { name: 'Open developer sandbox' }).click();

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, type FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, CheckCircle2, History, Home, LogOut, Menu, Send, ShieldCheck, UserRound, Wallet } from 'lucide-react';
-import { MicrosendrAuth } from './auth-shell.js';
+import { PersonalLogin } from './personal-login.js';
 import './personal.css';
 
 type Session = { authenticated: boolean; csrf_token?: string; email?: string; kyc_state?: string; residence_country?: string | null; display_currency?: string };
@@ -41,7 +41,7 @@ export function PersonalPage({ go, path, brand, themeToggle, onAuthChange }: { g
       setHome(h); setActivity(a.data);
     }
   };
-  useEffect(() => { void refresh().catch((e) => setError(e.message)); }, []);
+  useEffect(() => { void refresh().catch((e) => { setError(e.message); setSession({ authenticated: false }); }); }, []);
   useEffect(() => { if (session) onAuthChange(!!session.authenticated); }, [session?.authenticated, onAuthChange]);
   const run = async (fn: () => Promise<void>) => {
     setBusy(true); setError(''); setNotice('');
@@ -67,14 +67,7 @@ export function PersonalPage({ go, path, brand, themeToggle, onAuthChange }: { g
   const logout = () => void run(async () => { await request('/personal/api/logout', 'POST', {}, session?.csrf_token); setSession({ authenticated: false }); setHome(undefined); go('/personal/login'); });
   const nav = [ ['home', 'Home', Home], ['send', 'Send', Send], ['activity', 'Activity', History], ['profile', 'Profile', UserRound] ] as const;
   if (!session) return <div className="personal-loading">{brand}<p>Opening Personal…</p></div>;
-  if (!session.authenticated) return <div className="personal-auth">
-    <header><button onClick={() => go('/')}>{brand}</button></header>
-    <main className="personal-auth-main"><div className="personal-auth-story"><span className="personal-eyebrow">MICROSENDR PERSONAL</span><h1>Money, made simple.</h1><p>Your account to send and track value.</p><div className="personal-auth-proof"><ShieldCheck size={19}/> Sandbox preview · Simulated funds</div></div>
-      <section className="personal-card personal-auth-card"><span className="personal-eyebrow">PERSONAL</span><h2>Welcome back</h2>
-        {error && <p className="personal-error" role="alert">{error}</p>}
-        <MicrosendrAuth mode="personal" onComplete={next => { setSession(next); void refresh(); go('/personal/home'); }}/>
-        <button className="personal-text" onClick={() => go('/business')}>For Business <ArrowUpRight size={15}/></button>
-      </section></main></div>;
+  if (!session.authenticated) return <PersonalLogin brand={brand} go={go} error={error} onComplete={next => { setSession(next); void refresh(); go('/personal/home'); }} />;
   return <div className="personal-shell"><aside className={`personal-sidebar ${menu ? 'open' : ''}`}><button className="personal-brand" onClick={() => go('/personal/home')}>{brand}</button><div className="personal-sidebar-caption">PERSONAL ACCOUNT <span>Sandbox</span></div><nav>{nav.map(([id,label,Icon]) => <button key={id} className={tab===id?'active':''} onClick={() => {go('/personal/'+id);setMenu(false);}}><Icon size={19}/>{label}</button>)}</nav><div className="personal-sidebar-bottom"><div className="personal-sandbox-note"><ShieldCheck size={18}/><span>Simulated NGN only<br/><small>No live money movement</small></span></div><button onClick={logout}><LogOut size={18}/> Sign out</button></div></aside>
     {menu && <button className="personal-scrim" aria-label="Close menu" onClick={() => setMenu(false)}/>}
     <div className="personal-main"><header className="personal-topbar"><button className="personal-mobile-menu" aria-label="Open menu" onClick={() => setMenu(true)}><Menu size={22}/></button><span>Personal <b>/ {nav.find(([id])=>id===tab)?.[1] ?? 'Home'}</b></span><div>{themeToggle}<span className="personal-avatar">{session.email?.slice(0,1).toUpperCase()}</span></div></header><main className="personal-content">

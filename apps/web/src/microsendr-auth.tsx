@@ -50,9 +50,9 @@ function Form({ mode, onComplete, csrf, inviteToken, saveWorkspace }: Props) {
     {error && <p className="personal-error" role="alert">{error}</p>}
     {authenticated ? <button className="personal-primary" disabled={busy || !ready} onClick={() => void run(exchange)}>Continue to {mode} <ArrowRight size={17}/></button> :
       <form onSubmit={submit}>
-        {sent ? <label>Verification code<input autoComplete="one-time-code" inputMode="numeric" value={code} onChange={e => setCode(e.target.value)} maxLength={6} required /></label> :
+        {sent ? <><p className="ms-auth-sent" role="status">We sent a code to <strong>{email.trim()}</strong>.</p><label>Verification code<input type="text" autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength={6} required /></label></> :
           <label>Email address<input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required /></label>}
-        <button className="personal-primary" disabled={busy || !ready || (sent && code.length !== 6)}>{busy ? 'Please wait…' : sent ? 'Verify and continue' : 'Continue with email'} <ArrowRight size={17}/></button>
+        <button className="personal-primary" disabled={busy || !ready || (sent && code.length !== 6)} aria-busy={busy}>{busy ? 'Please wait…' : sent ? 'Verify and continue' : 'Continue with email'} <ArrowRight size={17}/></button>
         {sent && <button type="button" className="personal-text" onClick={() => { setSent(false); setCode(''); }}>Use another email</button>}
         <Captcha />
       </form>}
