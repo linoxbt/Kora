@@ -43,6 +43,7 @@ import { LandingPage } from './landing.js';
 import { PersonalPage } from './personal.js';
 import { BusinessLogin } from './business-login.js';
 import './theme.css';
+import './black-theme.css';
 type Intent = Model<'Intent'>;
 type Asset = Model<'AssetList'>['data'][number];
 const codes = ['NGN', 'KES', 'GHS', 'USDC'] as const;

@@ -30,3 +30,13 @@ test('phone pages fit without horizontal overflow', async ({ page }) => {
     expect(overflow, path).toBeLessThanOrEqual(1);
   }
 });
+
+test('default dark mode uses a black canvas across Kora modes', async ({ page }) => {
+  for (const [path, surface] of [['/', '.site-landing'], ['/personal/login', '.personal-auth'], ['/business/login', '.personal-auth']]) {
+    await page.goto(path);
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+    await expect(page.locator(surface)).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+  }
+  await page.goto('/');
+  await expect(page.locator('.site-feature-card').first()).toHaveCSS('background-color', 'rgb(18, 18, 18)');
+});
