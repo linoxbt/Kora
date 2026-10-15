@@ -120,7 +120,11 @@ export async function buildApi(options: ApiOptions = {}) {
   });
   app.decorateRequest('principal', null);
   app.decorateRequest('rawBody', '');
-  await app.register(rateLimit, { max: options.rateLimitMax ?? 300, timeWindow: '1 minute' });
+  await app.register(rateLimit, {
+    max: options.rateLimitMax ?? 300,
+    timeWindow: '1 minute',
+    allowList: (request) => request.method === 'GET' && /^\/(?:assets|images)\//.test(request.url),
+  });
   await app.register(cookie);
   await app.register(swagger, {
     openapi: {

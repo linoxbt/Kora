@@ -40,6 +40,7 @@ import { LocalRailPage } from './local-rail.js';
 import type { Session } from './session.js';
 import { AccountPage } from './account.js';
 import { LandingPage } from './landing.js';
+import { BusinessPage } from './business.js';
 import { PersonalPage } from './personal.js';
 import { BusinessLogin } from './business-login.js';
 import './microsendr.css';
@@ -1926,7 +1927,6 @@ function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
     localStorage.getItem('microsendr-theme') === 'dark' ? 'dark' : 'light',
   );
-  useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('microsendr-theme', theme); }, [theme]);
   const themeToggle = <button className="theme-toggle" aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? 'Light' : 'Dark'} theme</button>;
   const [path, go] = usePath(),
     [session, setSession] = useState<Session>(),
@@ -1937,6 +1937,12 @@ function App() {
     [transfer, setTransfer] = useState(false),
     [selected, setSelected] = useState<Intent>(),
     [version, setVersion] = useState(0);
+  const [personalAuthenticated, setPersonalAuthenticated] = useState(false);
+  useEffect(() => {
+    const signedInApp = path.startsWith('/app') && !!session?.authenticated && (session.auth_method === 'email' || session.auth_method === 'privy');
+    document.documentElement.dataset.theme = signedInApp || (path.startsWith('/personal') && personalAuthenticated) ? theme : 'light';
+    localStorage.setItem('microsendr-theme', theme);
+  }, [theme, path, session?.authenticated, session?.auth_method, personalAuthenticated]);
   const api = useMemo(() => new Kora({ csrfToken: session?.csrf_token }), [session?.csrf_token]);
   const merchant = useLoad(
     () => (session?.authenticated ? api.getMerchant() : Promise.resolve(undefined)),
@@ -2002,10 +2008,9 @@ function App() {
           </>
         )}
         <button onClick={() => go('/personal/login')}>Personal</button>
-        <button onClick={() => go('/business/login')}>Business</button>
+        <button onClick={() => go('/business')}>Business</button>
         <button onClick={() => go('/docs')}>Developers</button>
       </nav>
-      {themeToggle}
       {!session?.authenticated && (
         <button className="public-login text-button" onClick={() => go('/personal/login')}>
           Sign in
@@ -2032,9 +2037,11 @@ function App() {
       </>
     );
   if (path.startsWith('/personal'))
-    return <PersonalPage go={go} path={path} brand={<Logo />} themeToggle={themeToggle} />;
+    return <PersonalPage go={go} path={path} brand={<Logo />} themeToggle={themeToggle} onAuthChange={setPersonalAuthenticated} />;
   if (path === '/business/login' || path === '/login' || path === '/login/save')
-    return <BusinessLogin brand={<Logo />} go={go} themeToggle={themeToggle} session={session} saveWorkspace={path === '/login/save'} onSession={setSession} />;
+    return <BusinessLogin brand={<Logo />} go={go} session={session} saveWorkspace={path === '/login/save'} onSession={setSession} />;
+  if (path === '/business')
+    return <BusinessPage header={topNav} brand={<Logo />} go={go} />;
   if (path === '/')
     return (
       <LandingPage
@@ -2052,7 +2059,7 @@ function App() {
       </div>
     );
   if (!session.authenticated && path.startsWith('/app'))
-    return <BusinessLogin brand={<Logo />} go={go} themeToggle={themeToggle} session={session} onSession={setSession} />;
+    return <BusinessLogin brand={<Logo />} go={go} session={session} onSession={setSession} />;
   if (!session.authenticated || path === '/connect')
     return (
       <>
@@ -2152,7 +2159,7 @@ function App() {
           <span className="workspace-icon">{merchant.value?.name.slice(0, 1) ?? 'K'}</span>
           <div>
             <b>{merchant.value?.name ?? 'Workspace'}</b>
-            <small>{session.auth_method === 'email' ? 'Business account · Sandbox' : 'Developer Sandbox'}</small>
+            <small>{session.auth_method === 'email' || session.auth_method === 'privy' ? 'Business account · Sandbox' : 'Developer Sandbox'}</small>
           </div>
           <ChevronDown size={15} />
         </button>
@@ -2223,11 +2230,12 @@ function App() {
               <Menu size={21} />
             </button>
             <span className="breadcrumb">
-              {session.auth_method === 'email' ? 'Business' : 'Developer Sandbox'} <ChevronRight size={14} />
+              {session.auth_method === 'email' || session.auth_method === 'privy' ? 'Business' : 'Developer Sandbox'} <ChevronRight size={14} />
               <b>{nav.find((n) => n[0] === tab)?.[1] ?? 'Overview'}</b>
             </span>
           </div>
           <div>
+            {(session.auth_method === 'email' || session.auth_method === 'privy') && themeToggle}
             <span className="sandbox-top">
               <i />
               Sandbox

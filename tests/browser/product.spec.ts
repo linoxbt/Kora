@@ -30,7 +30,7 @@ test('public landing and generated API guide render', async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/overview$/);
   await page.goto('/');
   await page.getByRole('link', { name: 'How it works' }).first().click();
-  await expect(page.getByRole('heading', { name: 'One integration. More possibility.' })).toBeInViewport();
+  await expect(page.getByRole('heading', { name: 'Every move, in view.' })).toBeInViewport();
   await page.getByRole('banner').getByRole('button', { name: 'Developers', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'One API. A connected continent.' }),
@@ -42,7 +42,7 @@ test('landing page stays readable and actionable on mobile', async ({ page }) =>
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Money moves with you.' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole('button', { name: 'Explore Personal' }).click();
+  await page.locator('#platform').getByRole('button', { name: 'Explore Personal' }).click();
   await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
   await page.screenshot({ path: '.sandbox/screenshots/landing-mobile.png', fullPage: true });
   await page.goto('/');
