@@ -115,7 +115,7 @@ export function StellarPage({
         <div>
           <p className="eyebrow">SETTLEMENT & ASSETS</p>
           <h1>Stellar Testnet</h1>
-          <p>Move Kora Test USD through verified wallets and durable settlement receipts.</p>
+          <p>Move Microsendr Test USD through verified wallets and durable settlement receipts.</p>
         </div>
         <span className="badge">
           <ShieldCheck size={14} /> Test funds
@@ -128,7 +128,7 @@ export function StellarPage({
       )}
       {notice && <div className="notice">{notice}</div>}
       <section className="card stellar-config">
-        <h2>KUSD · Kora Test USD</h2>
+        <h2>KUSD · Microsendr Test USD</h2>
         <p>
           Fixture rate: 1 KUSD = ₦1,600. This staging asset has no cash redemption promise. Partner
           FX is pending.
@@ -265,7 +265,7 @@ export function StellarPage({
                     />
                   </label>
                   <p>
-                    Total includes a 0.5% Kora fee, rounded up to the nearest kobo. Delivery rounds
+                    Total includes a 0.5% Microsendr fee, rounded up to the nearest kobo. Delivery rounds
                     down to 7 decimals.
                   </p>
                   <button

@@ -6,6 +6,7 @@ import { id, pool, transaction } from '../../../packages/database/src/index.js';
 import { balance, postJournal } from '../../../packages/ledger/src/index.js';
 import { hashKey } from '../../../packages/payments/src/auth.js';
 import { PaymentError } from '../../../packages/payments/src/errors.js';
+import { privyConfiguration, privyVerifier, type PrivyConfig } from './identity.js';
 
 const emailSchema = z.string().trim().toLowerCase().email().max(254);
 const minorSchema = z.string().regex(/^[1-9][0-9]{0,11}$/);
@@ -30,8 +31,8 @@ export function mailer(): PersonalOptions['sendCode'] | undefined {
     await transport.sendMail({
       from: SMTP_FROM,
       to: email,
-      subject: 'Your Kora sign-in code',
-      text: `Your Kora sign-in code is ${code}. It expires in 10 minutes. If you did not request it, ignore this email.`,
+      subject: 'Your Microsendr sign-in code',
+      text: `Your Microsendr sign-in code is ${code}. It expires in 10 minutes. If you did not request it, ignore this email.`,
     });
   };
 }
@@ -82,10 +83,44 @@ function setCookie(request: FastifyRequest, reply: FastifyReply, token: string) 
     secure: origin(request).startsWith('https:'), path: '/', maxAge: 86400 });
 }
 
-export async function registerPersonal(app: FastifyInstance, options: PersonalOptions = {}) {
+export async function registerPersonal(app: FastifyInstance, options: PersonalOptions = {}, privyConfig: PrivyConfig = privyConfiguration()) {
   const secret = options.codeSecret ?? process.env.KORA_AUTH_SECRET;
   const sendCode = options.sendCode ?? mailer();
-  app.get('/personal/api/auth/config', async () => ({ enabled: !!(secret && sendCode), method: 'email_code' }));
+  const verifier = privyVerifier(privyConfig);
+  app.get('/personal/api/auth/config', async () => ({ enabled: await verifier.ready(), method: 'privy', app_id: privyConfig.appId, client_id: privyConfig.clientId ?? null }));
+  app.post('/personal/api/auth/privy', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
+    origin(request);
+    const { access_token, identity_token } = z.object({ access_token: z.string().min(1).max(8192), identity_token: z.string().min(1).max(32768) }).strict().parse(request.body);
+    const verified = await verifier.verify(access_token);
+    const email = emailSchema.parse(await verifier.verifyEmailIdentity(identity_token, verified.subject));
+    const result = await transaction(async (c) => {
+      await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`personal-privy:${verified.app_id}:${verified.subject}`]);
+      await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`personal-email:${email}`]);
+      let user = (await c.query('SELECT * FROM personal_users WHERE privy_app_id=$1 AND privy_subject=$2 FOR UPDATE', [verified.app_id, verified.subject])).rows[0];
+      if (user && user.email !== email) {
+        if ((await c.query('SELECT 1 FROM personal_users WHERE email=$1', [email])).rowCount)
+          throw new PaymentError(409, 'identity_conflict', 'This email is linked to another account');
+        await c.query('UPDATE personal_users SET email=$2,email_verified_at=now(),updated_at=now() WHERE id=$1', [user.id, email]);
+      }
+      if (!user) {
+        await c.query('INSERT INTO personal_users(id,email,email_verified_at,privy_app_id,privy_subject) VALUES($1,$2,now(),$3,$4) ON CONFLICT(email) DO NOTHING', [id('usr'), email, verified.app_id, verified.subject]);
+        user = (await c.query('SELECT * FROM personal_users WHERE email=$1 FOR UPDATE', [email])).rows[0];
+      }
+      if (user.privy_subject && (user.privy_subject !== verified.subject || user.privy_app_id !== verified.app_id))
+        throw new PaymentError(409, 'identity_conflict', 'This email is linked to another account');
+      await c.query('UPDATE personal_users SET privy_app_id=$2,privy_subject=$3,email_verified_at=now(),updated_at=now() WHERE id=$1', [user.id, verified.app_id, verified.subject]);
+      await c.query("INSERT INTO kora_accounts(id,owner_type,personal_user_id) VALUES($1,'personal',$2) ON CONFLICT(personal_user_id) DO NOTHING", [id('acct'), user.id]);
+      const account = (await c.query('SELECT id FROM kora_accounts WHERE personal_user_id=$1', [user.id])).rows[0];
+      await c.query('INSERT INTO ledger_accounts(id,owner_account_id,asset_position_id,asset,purpose) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING', [personalAccount(account.id), account.id, ngn, 'NGN', 'available']);
+      await c.query('INSERT INTO ledger_accounts(id,asset_position_id,asset,purpose) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING', ['sys:NGN:funding',ngn,'NGN','funding']);
+      const token = randomBytes(32).toString('hex'), csrfToken = randomBytes(32).toString('hex');
+      await c.query("INSERT INTO personal_sessions(token_hash,personal_user_id,csrf_token,expires_at) VALUES($1,$2,$3,now()+interval '1 day')", [hashKey(token), user.id, csrfToken]);
+      return { token, csrfToken, userId: user.id };
+    });
+    setCookie(request, reply, result.token);
+    const user = (await pool.query('SELECT u.*,a.id AS account_id FROM personal_users u JOIN kora_accounts a ON a.personal_user_id=u.id WHERE u.id=$1', [result.userId])).rows[0];
+    return publicSession({ ...user, user_id: user.id, csrf_token: result.csrfToken });
+  });
   app.post('/personal/api/auth/start', { config: { rateLimit: { max: 5, timeWindow: '1 hour' } } }, async (request, reply) => {
     origin(request);
     if (!secret || !sendCode) throw new PaymentError(503, 'email_unavailable', 'Email sign-in is not configured');
@@ -196,7 +231,7 @@ export async function registerPersonal(app: FastifyInstance, options: PersonalOp
       }
       const recipient = (await c.query("SELECT a.id FROM personal_users u JOIN kora_accounts a ON a.personal_user_id=u.id WHERE u.email=$1 AND u.kyc_state='sandbox_approved' AND a.status='active'", [recipient_email])).rows[0];
       if (!recipient || recipient.id === row.account_id)
-        throw new PaymentError(422, 'recipient_unavailable', 'Choose another eligible Kora Personal recipient');
+        throw new PaymentError(422, 'recipient_unavailable', 'Choose another eligible Microsendr Personal recipient');
       const transferId = id('trf');
       const journalId = await postJournal(c, { reference: `personal:transfer:${transferId}`, description: 'Personal sandbox P2P transfer', entries: [
         { account_id: personalAccount(row.account_id), side: 'credit', amount: amount_minor },

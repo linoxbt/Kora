@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Copy, ShieldCheck, UserPlus } from 'lucide-react';
-import type { Session } from './login.js';
+import type { Session } from './session.js';
 
 type Workspace = { merchant_id: string; name: string; role: 'owner' | 'viewer' | 'editor' };
 type Member = {
@@ -102,7 +102,7 @@ export function AccountPage({
             <dt>Sign-in method</dt>
             <dd>
               {session.auth_method === 'email'
-                ? 'Kora email code'
+                ? 'Microsendr email code'
                 : session.auth_method === 'privy'
                   ? 'Legacy email login'
                 : session.auth_method === 'sandbox'
@@ -186,7 +186,7 @@ export function AccountPage({
           <UserPlus size={25} />
           <h2>Team access</h2>
           <p>
-            Create a private link for one teammate. Anyone with the link and a verified Kora login
+            Create a private link for one teammate. Anyone with the link and a verified Microsendr login
             can use it once within seven days.
           </p>
           <label>

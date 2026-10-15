@@ -232,7 +232,7 @@ export function LocalRailPage({
         <section className="card rail-form">
           <h3>Send to a verified bank account</h3>
           <p>
-            Your source amount includes the 0.5% Kora fee. Funds stay reserved until the provider
+            Your source amount includes the 0.5% Microsendr fee. Funds stay reserved until the provider
             outcome is verified.
           </p>
           <fieldset disabled={busy || uncertain}>
@@ -274,7 +274,7 @@ export function LocalRailPage({
                 return (
                   <div className="rail-summary">
                     <span>
-                      Kora fee <b>{money(fee.toString())}</b>
+                      Microsendr fee <b>{money(fee.toString())}</b>
                     </span>
                     <span>
                       Recipient receives <b>{money((gross - fee).toString())}</b>
@@ -329,7 +329,7 @@ export function LocalRailPage({
         <section className="card rail-form">
           <h3>Name enquiry</h3>
           <p>
-            Resolve the account name before registering a recipient. Kora displays only the last
+            Resolve the account name before registering a recipient. Microsendr displays only the last
             four account digits after registration.
           </p>
           <fieldset disabled={busy || uncertain}>

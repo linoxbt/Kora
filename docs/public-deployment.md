@@ -1,8 +1,8 @@
-# Public sandbox deployment
+# Microsendr public sandbox deployment
 
 The frontend is published at `https://kora-sandbox-linoxbt.netlify.app` and
 proxies API paths to `https://kora-api.13-140-188-185.sslip.io`. The API, worker,
-and PostgreSQL run on the Kora host with `compose.public.yaml`. The database is
+and PostgreSQL run on the Microsendr host with `compose.public.yaml`. The database is
 stored in the `kora-public-postgres` Docker volume. All funds and providers in
 this deployment are simulated.
 
@@ -14,12 +14,12 @@ Create an ignored, mode `600` `.env.public` at the repository root. Set
 random secrets. Set `KORA_CONSOLE_ORIGINS` to the exact Netlify HTTPS origin.
 Keep `KORA_MODE=sandbox`, and leave `PAYSTACK_SECRET_KEY` blank for the simulator.
 Never commit this file. The Compose file supplies the internal `DATABASE_URL`.
-Personal and Business email sign-in require `KORA_AUTH_SECRET`, `SMTP_HOST`,
-`SMTP_PORT`, and `SMTP_FROM`; set `SMTP_USER` and `SMTP_PASS` when the SMTP
-service requires authentication. Without these variables, both sign-in forms
-fail closed and the existing Developer Sandbox remains available. The secret
-must remain stable across API restarts because it authenticates outstanding
-one-time codes. Use a delivery service and sender domain under Kora's control.
+Personal and Business sign-in use Privy. Set `PRIVY_APP_ID` and the server-side
+`PRIVY_VERIFICATION_KEY`; optionally set `PRIVY_CLIENT_ID`. Enable Privy email
+login and identity tokens, and allow the exact Netlify HTTPS origin in Privy.
+Without these settings, sign-in fails closed and the Developer Sandbox remains
+available. Legacy email-code sessions can continue only when the optional
+SMTP settings are configured; new sign-in pages use Privy.
 
 The HTTPS reverse proxy needs a host entry equivalent to:
 

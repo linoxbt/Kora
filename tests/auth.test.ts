@@ -113,6 +113,21 @@ test('verified first login atomically creates one funded sandbox owner and a has
     violations: [],
   });
 });
+
+test('Privy Business starts unfunded and requires the sandbox KYB fixture', async () => {
+  const f = await fixture();
+  const login = await f.login(await f.sign(), { name: 'Privy Business', business_account: true });
+  assert.equal(login.statusCode, 200, login.body);
+  const merchant = login.json().merchant_id;
+  const organization = (await pool.query('SELECT kyb_required,kyb_state FROM organizations WHERE legacy_merchant_id=$1', [merchant])).rows[0];
+  assert.equal(organization.kyb_required, true);
+  assert.equal(organization.kyb_state, 'not_started');
+  const before = await f.app.inject({ url: '/v1/balances', headers: { cookie: cookieOf(login) } });
+  assert.equal(before.statusCode, 200);
+  assert.equal(before.body.includes('250000000'), false);
+  const approved = await f.app.inject({ method: 'POST', url: '/business/api/sandbox/verify', headers: { origin, cookie: cookieOf(login), 'x-kora-csrf': login.json().csrf_token }, payload: { acknowledge_simulation: true } });
+  assert.equal(approved.statusCode, 200, approved.body);
+});
 test('concurrent first logins and response retries preserve one workspace, owner key and funding set', async () => {
   const f = await fixture(),
     token = await f.sign();

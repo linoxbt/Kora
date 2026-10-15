@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { buildApi } from '../services/api/src/app.js';
 import { id, pool } from '../packages/database/src/index.js';
 import { invariantReport } from '../packages/ledger/src/index.js';
+import { generateKeyPair, exportSPKI, SignJWT } from 'jose';
 
 const origin = 'http://127.0.0.1:4310';
 const codes = new Map<string,string>();
@@ -66,4 +67,33 @@ test('Personal transfer posts once under an idempotency key and cannot overdraw'
   assert.equal(activity.json().data.length, 1);
   assert.equal(activity.json().data[0].direction, 'received');
   assert.deepEqual(await invariantReport(), { balanced: true, nonnegative: true, no_empty_journals: true, violations: [] });
+});
+
+test('Privy Personal requires a matching signed identity token with verified email', async () => {
+  const pair = await generateKeyPair('ES256');
+  const appId = 'microsendr-personal-test';
+  const configured = await buildApi({ serveWeb: false, rateLimitMax: 10000, privyConfig: { appId, verificationKey: await exportSPKI(pair.publicKey) } });
+  try {
+    const subject = `did:privy:${id('user')}`, email = `${id('privy')}@example.test`;
+    const sign = (sub: string, claims: Record<string, unknown>) => new SignJWT(claims)
+      .setProtectedHeader({ alg: 'ES256' }).setIssuer('privy.io').setAudience(appId)
+      .setSubject(sub).setIssuedAt().setExpirationTime('1h').sign(pair.privateKey);
+    const access_token = await sign(subject, { sid: id('sid') });
+    const identity_token = await sign(subject, { linked_accounts: JSON.stringify([{ type: 'email', address: email, lv: Math.floor(Date.now() / 1000) }]) });
+    const login = (identity: string) => configured.inject({ method: 'POST', url: '/personal/api/auth/privy', headers: { origin }, payload: { access_token, identity_token: identity } });
+    assert.equal((await login(await sign(`did:privy:${id('other')}`, { linked_accounts: JSON.stringify([{ type: 'email', address: email, lv: 1 }]) }))).statusCode, 401);
+    assert.equal((await login(await sign(subject, { linked_accounts: JSON.stringify([{ type: 'email', address: email }]) }))).statusCode, 401);
+    const first = await login(identity_token);
+    assert.equal(first.statusCode, 200, first.body);
+    assert.equal(first.json().email, email);
+    assert.match(String(first.headers['set-cookie']), /HttpOnly/);
+    const again = await login(identity_token);
+    assert.equal(again.statusCode, 200, again.body);
+    assert.equal(again.json().account_id, first.json().account_id);
+    const changedEmail = `${id('updated')}@example.test`;
+    const changed = await login(await sign(subject, { linked_accounts: JSON.stringify([{ type: 'email', address: changedEmail, lv: Math.floor(Date.now() / 1000) }]) }));
+    assert.equal(changed.statusCode, 200, changed.body);
+    assert.equal(changed.json().account_id, first.json().account_id);
+    assert.equal(changed.json().email, changedEmail);
+  } finally { await configured.close(); }
 });

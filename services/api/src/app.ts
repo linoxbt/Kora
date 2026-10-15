@@ -126,7 +126,7 @@ export async function buildApi(options: ApiOptions = {}) {
     openapi: {
       openapi: '3.0.3',
       info: {
-        title: 'Kora API',
+        title: 'Microsendr API',
         version: '0.8.0',
         description:
           'African financial interoperability infrastructure. Paystack NGN collections and payouts accept test keys only. Cross-border routes and identity checks remain sandbox simulations.',
@@ -621,7 +621,7 @@ export async function buildApi(options: ApiOptions = {}) {
   await registerRails(app, options.paystackClient);
   await registerStellar(app, options.stellarConnector);
   await registerProduct(app);
-  await registerPersonal(app, options.personal);
+  await registerPersonal(app, options.personal, options.privyConfig);
   await registerSessions(app, options.privyConfig, options.personal);
   app.get('/openapi.json', async () => app.swagger());
   await app.ready();

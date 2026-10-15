@@ -20,21 +20,18 @@ test.beforeEach(async ({ context, page }) => {
 });
 test('public landing and generated API guide render', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Move value. Across every boundary.' })).toBeVisible();
-  await expect(page.getByText('Currently a sandbox. Funds and providers are simulated.')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'A sandbox you can use. A scope you can trust.' })).toBeVisible();
-  await page.getByText('Can I move real money through Kora?').click();
-  await expect(page.getByText('Funds and providers in the current Nigerian sandbox are simulated.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Money moves with you.' })).toBeVisible();
+  await expect(page.getByText('Sandbox preview · Funds and providers are simulated')).toBeVisible();
   await page.screenshot({ path: '.sandbox/screenshots/landing.png', fullPage: true });
-  await page.getByRole('button', { name: 'POST /v1/intents' }).click();
+  await page.getByRole('button', { name: 'Read the docs' }).click();
   await expect(page.locator('.endpoint-list')).toContainText('/v1/intents');
   await page.goto('/');
-  await page.getByRole('button', { name: 'Start with the Nigerian developer sandbox' }).click();
+  await page.getByRole('button', { name: 'Open developer sandbox' }).click();
   await expect(page).toHaveURL(/\/app\/overview$/);
   await page.goto('/');
   await page.getByRole('link', { name: 'How it works' }).first().click();
-  await expect(page.getByRole('heading', { name: 'Know what happened. Know what comes next.' })).toBeInViewport();
-  await page.getByRole('button', { name: 'Developers', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'One integration. More possibility.' })).toBeInViewport();
+  await page.getByRole('banner').getByRole('button', { name: 'Developers', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'One API. A connected continent.' }),
   ).toBeVisible();
@@ -43,12 +40,13 @@ test('public landing and generated API guide render', async ({ page }) => {
 test('landing page stays readable and actionable on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Move value. Across every boundary.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Money moves with you.' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole('link', { name: "Today's sandbox" }).click();
-  await expect(page.getByRole('heading', { name: 'Kora Personal sandbox' })).toBeInViewport();
+  await page.getByRole('button', { name: 'Explore Personal' }).click();
+  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
   await page.screenshot({ path: '.sandbox/screenshots/landing-mobile.png', fullPage: true });
-  await page.getByRole('button', { name: 'Start with the Nigerian developer sandbox' }).click();
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Open developer sandbox' }).click();
   await expect(page).toHaveURL(/\/app\/overview$/);
 });
 test('browser onboarding creates an isolated session and sign-out removes access', async ({
@@ -66,11 +64,11 @@ test('browser onboarding creates an isolated session and sign-out removes access
   const cookie = (await context.cookies()).find((c) => c.name === 'kora_console');
   expect(cookie?.httpOnly).toBe(true);
   expect(cookie?.sameSite).toBe('Strict');
-  expect(await page.evaluate(() => [localStorage.getItem('kora-theme'), sessionStorage.length])).toEqual(['dark', 0]);
+  expect(await page.evaluate(() => [localStorage.getItem('microsendr-theme'), sessionStorage.length])).toEqual(['light', 0]);
   await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page.getByRole('heading', { name: 'Welcome to Kora' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
   await page.goto('/app/overview');
-  await expect(page.getByRole('heading', { name: 'Welcome to Kora' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
 });
 test('overview shows real ledger balances and sandbox transaction states', async ({ page }) => {
   await page.goto('/app/overview');
@@ -80,7 +78,7 @@ test('overview shows real ledger balances and sandbox transaction states', async
   await expect(page.locator('.balances-strip')).toContainText('USDC balance');
   await expect(page.locator('.metric').first().locator('h2')).not.toHaveText('—');
   await page.screenshot({ path: '.sandbox/screenshots/overview.png', fullPage: true });
-  expect(await page.evaluate(() => [localStorage.getItem('kora-theme'), sessionStorage.length])).toEqual(['dark', 0]);
+  expect(await page.evaluate(() => [localStorage.getItem('microsendr-theme'), sessionStorage.length])).toEqual(['light', 0]);
 });
 test('business transfer gets a quote, settles and appears in filtered transactions', async ({
   page,

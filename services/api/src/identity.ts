@@ -52,7 +52,7 @@ export function privyVerifier(config: PrivyConfig) {
         throw new PaymentError(
           503,
           'login_not_configured',
-          'Email login is not configured yet. You can explore Kora in a guest sandbox.',
+          'Email login is not configured yet. You can explore Microsendr in a guest sandbox.',
         );
       try {
         const { payload } = await jwtVerify(token, publicKey, {
@@ -80,6 +80,25 @@ export function privyVerifier(config: PrivyConfig) {
         );
       }
     },
+    async verifyEmailIdentity(token: string, expectedSubject: string) {
+      const publicKey = await key;
+      if (!publicKey) throw new PaymentError(503, 'login_not_configured', 'Privy login is not configured');
+      try {
+        const { payload } = await jwtVerify(token, publicKey, {
+          algorithms: ['ES256'], issuer: 'privy.io', audience: config.appId,
+          requiredClaims: ['sub', 'iat', 'exp'], clockTolerance: 5, maxTokenAge: '1h',
+        });
+        if (payload.sub !== expectedSubject || typeof payload.linked_accounts !== 'string') throw new Error('Identity mismatch');
+        const accounts: unknown = JSON.parse(payload.linked_accounts);
+        if (!Array.isArray(accounts)) throw new Error('Invalid accounts');
+        const email = accounts.find((account) => account && account.type === 'email' &&
+          typeof account.address === 'string' && typeof account.lv === 'number' && account.lv > 0)?.address;
+        if (typeof email !== 'string') throw new Error('Verified email required');
+        return email.trim().toLowerCase();
+      } catch {
+        throw new PaymentError(401, 'invalid_identity_token', 'Your email could not be verified. Sign in again.');
+      }
+    },
   };
 }
 
@@ -88,7 +107,7 @@ export async function identityPrincipal(
   verified: { app_id: string; subject: string; provider?: 'privy' | 'email' },
   name: string,
   claim?: Principal,
-  options: { inviteToken?: string; workspaceId?: string } = {},
+  options: { inviteToken?: string; workspaceId?: string; businessAccount?: boolean } = {},
 ): Promise<{ principal: Principal; identity_id: string; role: TeamRole }> {
   await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [
     `console-identity:${verified.app_id}:${verified.subject}`,
@@ -230,7 +249,7 @@ export async function identityPrincipal(
       ['USDC', '8000000000'],
       ['KES', '75000000'],
       ['GHS', '1200000'],
-    ] as const).filter(() => verified.provider !== 'email'))
+    ] as const).filter(() => verified.provider !== 'email' && !options.businessAccount))
       await postJournal(c, {
         reference: `${merchant}:fixture:${asset}`,
         description: 'Sandbox fixture funding',
@@ -241,7 +260,7 @@ export async function identityPrincipal(
       });
     const ownerKey = await issueApiKey(merchant, 'Business workspace owner', allScopes, c);
     principal = { merchant_id: merchant, key_id: ownerKey.id, scopes: [...allScopes] };
-    if (verified.provider === 'email')
+    if (verified.provider === 'email' || options.businessAccount)
       await c.query("UPDATE organizations SET kyb_required=true,sandbox_funding_on_approval=true WHERE legacy_merchant_id=$1", [merchant]);
   }
   await c.query(

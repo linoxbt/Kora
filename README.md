@@ -1,15 +1,15 @@
-# Kora
+# Microsendr
 
-Kora Personal lets people use the network. Kora Business lets companies build
-on the network. Kora Network is the shared ledger and settlement foundation.
+Microsendr Personal lets people use the network. Microsendr Business lets companies build
+on the network. The shared ledger and settlement foundation power both modes.
 The current deployment is a sandbox with simulated funds and providers.
 
 The [v2 foundation](docs/v2-foundation.md) adds separate Personal and Business
-email-code identities, explicit KYC/KYB sandbox fixtures, canonical asset
-positions, NGN Personal transfers, dark theme and focused account navigation.
+Personal and Business identities, explicit KYC/KYB sandbox fixtures, canonical asset
+positions, NGN Personal transfers, SteelBlue and cream design, and focused account navigation.
 Real-money capabilities remain staged behind partner and control gates.
 
-Kora is being built in tested phases. **Phases 0–2 implement the sandbox
+Microsendr is being built in tested phases. **Phases 0–2 implement the sandbox
 financial core, payment engine, and product.** The dashboard and hosted flow
 use the authenticated HTTP API and durable worker. **Phase 3 adds Paystack
 test-mode NGN collections and bank payouts**, locally validated with a provider
@@ -39,8 +39,8 @@ backup/restore drills.** Live activation remains unavailable.
 - Developer key management, redacted request logs and webhook replay controls.
 - Operations debugger with holds, attempts, receipts and per-asset journals.
 - HttpOnly console sessions, CSRF checks and isolated prefunded workspaces.
-- Legacy Privy-backed workspace sessions and persistent workspace access; new
-  Personal and Business sign-ins use Kora-managed email codes when SMTP is configured.
+- Privy email sign-in for Personal and Business; signed identity verification,
+  persistent sessions, and separate sandbox KYC/KYB gates.
 - Generated OpenAPI, interactive reference and packaged TypeScript SDK.
 
 - Paystack test-mode name enquiry, verified NGN recipients, collections and payouts.

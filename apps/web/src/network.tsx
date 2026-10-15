@@ -144,7 +144,7 @@ export function NetworkPage({
       <div className="page-heading">
         <div>
           <p className="eyebrow">NIGERIA FIRST</p>
-          <h1>The Kora network</h1>
+          <h1>The Microsendr network</h1>
           <p>NGN source → simulated KUSD settlement → NGN payout.</p>
         </div>
         <span className="badge sandbox">Sandbox</span>

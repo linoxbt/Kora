@@ -37,13 +37,12 @@ import { NetworkPage } from './network.js';
 import { ControlsPage } from './controls.js';
 import { StellarPage } from './stellar.js';
 import { LocalRailPage } from './local-rail.js';
-import type { Session } from './login.js';
+import type { Session } from './session.js';
 import { AccountPage } from './account.js';
 import { LandingPage } from './landing.js';
 import { PersonalPage } from './personal.js';
 import { BusinessLogin } from './business-login.js';
-import './theme.css';
-import './black-theme.css';
+import './microsendr.css';
 type Intent = Model<'Intent'>;
 type Asset = Model<'AssetList'>['data'][number];
 const codes = ['NGN', 'KES', 'GHS', 'USDC'] as const;
@@ -82,28 +81,12 @@ const message = (e: unknown) => (e instanceof Error ? e.message : 'Something wen
 function Logo() {
   return (
     <span className="logo">
-      <svg viewBox="0 0 32 32" aria-hidden="true">
-        <rect x="1" y="2" width="10" height="28" rx="5" fill="currentColor" />
-        <rect
-          x="16"
-          y="1"
-          width="10"
-          height="19"
-          rx="5"
-          transform="rotate(40 21 10)"
-          fill="currentColor"
-        />
-        <rect
-          x="16"
-          y="15"
-          width="10"
-          height="18"
-          rx="5"
-          transform="rotate(-40 21 24)"
-          fill="currentColor"
-        />
+      <svg viewBox="0 0 36 36" aria-hidden="true">
+        <rect width="36" height="36" rx="9" fill="#4682B4" />
+        <path d="M7 25V11l11 10 11-10v14" fill="none" stroke="#FFF8EA" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M22 27h7m0 0-3-3m3 3-3 3" fill="none" stroke="#FFF8EA" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      kora
+      microsendr
     </span>
   );
 }
@@ -456,7 +439,7 @@ function TransferFlow({
             </h2>
             <p>
               {intent.state === 'unknown'
-                ? 'Funds remain reserved while Kora verifies the provider status. Review this intent in Operations.'
+                ? 'Funds remain reserved while Microsendr verifies the provider status. Review this intent in Operations.'
                 : intent.state === 'succeeded'
                   ? 'The simulated provider receipt and settlement journals are recorded.'
                   : intent.state === 'failed'
@@ -694,7 +677,7 @@ function Transactions({
     );
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'kora-transactions.csv';
+    a.download = 'microsendr-transactions.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1117,13 +1100,13 @@ function BusinessOverview({ api, go }: { api: Kora; go: (path: string) => void }
   const ngnAvailable = balances.value?.data.find((b) => b.asset === 'NGN' && b.purpose === 'available')?.minor ?? '0';
   const ngnHeld = balances.value?.data.find((b) => b.asset === 'NGN' && b.purpose === 'reserved')?.minor ?? '0';
   return <>
-    <div className="welcome"><div><span className="eyebrow">KORA BUSINESS · SANDBOX</span><h1>Your business, in one place.</h1><p>Manage a simulated NGN position and explore settlement tools.</p></div></div>
+    <div className="welcome"><div><span className="eyebrow">MICROSENDR BUSINESS · SANDBOX</span><h1>Your business, in one place.</h1></div></div>
     {balances.error && <Notice>{balances.error}</Notice>}
-    <section className="business-balance-card"><span>AVAILABLE · SIMULATED NGN</span><strong>₦{decimal(ngnAvailable,'NGN')}</strong><small>NGN fiat position · No bank deposit or live payout is connected.</small></section>
+    <section className="business-balance-card"><span>AVAILABLE · SIMULATED NGN</span><strong>₦{decimal(ngnAvailable,'NGN')}</strong><small>Test funds only</small></section>
     <div className="business-overview-grid">
-      <section className="card"><span className="eyebrow">BALANCES</span><h2>Know what is available.</h2><p>See available and reserved NGN separately. The ledger records each change.</p><b>Reserved: ₦{decimal(ngnHeld,'NGN')}</b><button className="button subtle" onClick={()=>go('/app/assets')}>View balances <ArrowRight size={16}/></button></section>
-      <section className="card"><span className="eyebrow">PAYMENTS</span><h2>Track each outcome.</h2><p>Follow a sandbox settlement from request through receipt and reconciliation.</p><button className="button subtle" onClick={()=>go('/app/transactions')}>View payments <ArrowRight size={16}/></button></section>
-      <section className="card"><span className="eyebrow">DEVELOPERS</span><h2>Build with clear contracts.</h2><p>Find API keys, signed webhooks, request logs and the isolated Developer Sandbox.</p><button className="button subtle" onClick={()=>go('/app/developers')}>Open developers <ArrowRight size={16}/></button></section>
+      <section className="card"><span className="eyebrow">BALANCES</span><h2>Available and reserved</h2><b>Reserved: ₦{decimal(ngnHeld,'NGN')}</b><button className="button subtle" onClick={()=>go('/app/assets')}>View balances <ArrowRight size={16}/></button></section>
+      <section className="card"><span className="eyebrow">PAYMENTS</span><h2>Settlement activity</h2><button className="button subtle" onClick={()=>go('/app/transactions')}>View payments <ArrowRight size={16}/></button></section>
+      <section className="card"><span className="eyebrow">DEVELOPERS</span><h2>API and webhooks</h2><button className="button subtle" onClick={()=>go('/app/developers')}>Open developers <ArrowRight size={16}/></button></section>
     </div>
   </>;
 }
@@ -1131,7 +1114,7 @@ function BusinessBalances({ api }: { api: Kora }) {
   const balances=useLoad(()=>api.listBalances(),[api]);
   const available=balances.value?.data.find(b=>b.asset==='NGN'&&b.purpose==='available')?.minor??'0';
   const reserved=balances.value?.data.find(b=>b.asset==='NGN'&&b.purpose==='reserved')?.minor??'0';
-  return <><div className="page-heading"><div><span className="eyebrow">CANONICAL POSITION</span><h1>Balances</h1><p>Your current Business sandbox position, by availability.</p></div></div>{balances.error&&<Notice>{balances.error}</Notice>}<section className="card business-position"><div><span>Asset</span><b>NGN · Nigerian naira</b></div><div><span>Network</span><b>Fiat Nigeria · simulated</b></div><div><span>Available</span><b>₦{decimal(available,'NGN')}</b></div><div><span>Reserved</span><b>₦{decimal(reserved,'NGN')}</b></div><p>Other currencies and networks remain in the Developer Sandbox until their full deposit, withdrawal and reconciliation paths are ready.</p></section></>;
+  return <><div className="page-heading"><div><span className="eyebrow">BUSINESS ACCOUNT</span><h1>Balances</h1></div></div>{balances.error&&<Notice>{balances.error}</Notice>}<section className="card business-position"><div><span>Asset</span><b>NGN · Nigerian naira</b></div><div><span>Network</span><b>Fiat Nigeria · simulated</b></div><div><span>Available</span><b>₦{decimal(available,'NGN')}</b></div><div><span>Reserved</span><b>₦{decimal(reserved,'NGN')}</b></div></section></>;
 }
 function AssetsPage({ api }: { api: Kora }) {
   const data = useLoad(() => Promise.all([api.listAssets(), api.listBalances()]), [api]);
@@ -1935,15 +1918,15 @@ function BusinessVerification({ session, onApproved }: { session: Session; onApp
   const [account,setAccount]=useState<{ kyb_required:boolean; kyb_state:string }>();
   const [error,setError]=useState('');
   const refresh=()=>fetch('/business/api/account',{credentials:'include'}).then(r=>r.json()).then(setAccount).catch(()=>setError('Business verification status is unavailable.'));
-  useEffect(()=>{if(session.auth_method==='email')void refresh();},[session.auth_method]);
-  if(session.auth_method!=='email'||!account?.kyb_required) return null;
-  return <section className="card business-verification"><span className="eyebrow">BUSINESS VERIFICATION</span><h2>{account.kyb_state==='sandbox_approved'?'Sandbox access approved':'Verify your Business sandbox'}</h2><p>{account.kyb_state==='sandbox_approved'?'Your sandbox fixture permits simulated activity. Real settlement will require actual KYB and partner approval.':'Before creating simulated payments or API keys, explicitly enable the Business KYB test fixture. This is not real company verification.'}</p>{error&&<Notice>{error}</Notice>}{account.kyb_state!=='sandbox_approved'&&<button className="button primary" onClick={()=>void fetch('/business/api/sandbox/verify',{method:'POST',credentials:'include',headers:{'content-type':'application/json','x-kora-csrf':session.csrf_token??''},body:JSON.stringify({acknowledge_simulation:true})}).then(async r=>{if(!r.ok)throw new Error((await r.json()).error?.message??'Verification failed');onApproved();}).catch(e=>setError(e.message))}>Enable simulated activity <ArrowRight size={15}/></button>}</section>;
+  useEffect(()=>{if(session.auth_method==='email'||session.auth_method==='privy')void refresh();},[session.auth_method]);
+  if(!account?.kyb_required) return null;
+  return <section className="card business-verification"><span className="eyebrow">BUSINESS VERIFICATION</span><h2>{account.kyb_state==='sandbox_approved'?'Sandbox ready':'Enable Business sandbox'}</h2><p>{account.kyb_state==='sandbox_approved'?'Simulated activity is enabled. Real activity requires KYB.':'Activate the test KYB fixture to use simulated funds. This is not real verification.'}</p>{error&&<Notice>{error}</Notice>}{account.kyb_state!=='sandbox_approved'&&<button className="button primary" onClick={()=>void fetch('/business/api/sandbox/verify',{method:'POST',credentials:'include',headers:{'content-type':'application/json','x-kora-csrf':session.csrf_token??''},body:JSON.stringify({acknowledge_simulation:true})}).then(async r=>{if(!r.ok)throw new Error((await r.json()).error?.message??'Verification failed');onApproved();}).catch(e=>setError(e.message))}>Enable sandbox <ArrowRight size={15}/></button>}</section>;
 }
 function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
-    localStorage.getItem('kora-theme') === 'light' ? 'light' : 'dark',
+    localStorage.getItem('microsendr-theme') === 'dark' ? 'dark' : 'light',
   );
-  useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('kora-theme', theme); }, [theme]);
+  useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('microsendr-theme', theme); }, [theme]);
   const themeToggle = <button className="theme-toggle" aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? 'Light' : 'Dark'} theme</button>;
   const [path, go] = usePath(),
     [session, setSession] = useState<Session>(),
@@ -2152,7 +2135,7 @@ function App() {
             <TransferFlow api={api} hosted onDone={done} />
           </section>
         </main>
-        <footer>Powered by Kora · Simulated settlement</footer>
+        <footer>Powered by Microsendr · Simulated settlement</footer>
       </div>
     );
   return (
@@ -2218,7 +2201,7 @@ function App() {
             Sign out
           </button>
           <div className="sidebar-version">
-            Kora <span>v0.8 · Sandbox</span>
+            Microsendr <span>v0.8 · Sandbox</span>
           </div>
         </div>
       </aside>
@@ -2250,13 +2233,13 @@ function App() {
               Sandbox
             </span>
             <span className="top-divider" />
-            <span className="avatar">{merchant.value?.name.slice(0, 2).toUpperCase() ?? 'KO'}</span>
+            <span className="avatar">{merchant.value?.name.slice(0, 2).toUpperCase() ?? 'MS'}</span>
           </div>
         </header>
         <main className="content" key={version}>
           {tab === 'overview' && <BusinessVerification session={session} onApproved={() => setVersion((n) => n + 1)} />}
           {tab === 'overview' ? (
-            session.auth_method === 'email' ? <BusinessOverview api={api} go={go} /> : <Overview
+            session.auth_method === 'email' || session.auth_method === 'privy' ? <BusinessOverview api={api} go={go} /> : <Overview
               api={api}
               onTransfer={() => setTransfer(true)}
               onSelect={setSelected}
@@ -2287,7 +2270,7 @@ function App() {
           ) : tab === 'network' ? (
             <NetworkPage api={api} can={(scope) => !!can(scope)} onSelect={setSelected} />
           ) : tab === 'assets' ? (
-            session.auth_method === 'email' ? <BusinessBalances api={api} /> : <AssetsPage api={api} />
+            session.auth_method === 'email' || session.auth_method === 'privy' ? <BusinessBalances api={api} /> : <AssetsPage api={api} />
           ) : tab === 'customers' ? (
             <CustomersPage api={api} />
           ) : tab === 'developers' && can('keys:read') ? (
@@ -2307,7 +2290,7 @@ function App() {
             <span>
               <ShieldCheck size={14} /> Sandbox data · Test funds and provider rails
             </span>
-            <span>Kora infrastructure</span>
+            <span>Microsendr infrastructure</span>
           </footer>
         </main>
       </div>
